@@ -2,6 +2,7 @@
     "name": "Rusty Club",
     "type": "weapon",
     "art": "  o\n  |\n  |",
+    "color": "#A0522D",
     "stats": {
         "damage": [2, 6]
     }

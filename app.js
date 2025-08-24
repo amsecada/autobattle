@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.stats = {
                 maxHp: stats.hp,
                 hp: stats.hp,
-                stamina: 0,
+                stamina: -100, // Start on cooldown
                 maxStamina: 100,
                 strength: stats.strength,
                 dexterity: stats.dexterity,
@@ -141,17 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function getCompositedArt(character) {
-        let finalArt = character.art;
-        if (character.equipment.weapon) {
-            const charArtLines = finalArt.split('\n');
-            const weaponArtLines = character.equipment.weapon.art.split('\n');
-            finalArt = charArtLines.map((line, i) => line + (weaponArtLines[i] || '')).join('\n');
-        }
-        // Add offhand and trinket logic here later
-        return finalArt;
-    }
-
     function placeCharacter(character, side, cellIndex) {
         const cellId = `${side}-cell-${cellIndex}`;
         character.cellId = cellId;
@@ -161,13 +150,49 @@ document.addEventListener('DOMContentLoaded', () => {
         cellCharacterMap.set(cellId, character);
 
         const cell = document.getElementById(cellId);
-        const finalArt = getCompositedArt(character);
+        if (!cell) return;
+
+        // Create a container for all art elements
+        const artContainer = document.createElement('div');
+        artContainer.classList.add('art-container');
+
+        // Character Art
+        const charArt = document.createElement('pre');
+        charArt.classList.add('character-art');
+        charArt.style.color = character.color;
+        charArt.textContent = character.art;
+        artContainer.appendChild(charArt);
+
+        // Equipment Art
+        const { weapon, offhand, trinket } = character.equipment;
+        if (weapon) {
+            const weaponArt = document.createElement('pre');
+            weaponArt.classList.add('equipment-art', 'weapon');
+            weaponArt.style.color = weapon.color || character.color; // Fallback to character color
+            weaponArt.textContent = weapon.art;
+            artContainer.appendChild(weaponArt);
+        }
+        if (offhand) {
+            const offhandArt = document.createElement('pre');
+            offhandArt.classList.add('equipment-art', 'offhand');
+            offhandArt.style.color = offhand.color || character.color;
+            offhandArt.textContent = offhand.art;
+            artContainer.appendChild(offhandArt);
+        }
+        if (trinket) {
+            const trinketArt = document.createElement('pre');
+            trinketArt.classList.add('equipment-art', 'trinket');
+            trinketArt.style.color = trinket.color || character.color;
+            trinketArt.textContent = trinket.art;
+            artContainer.appendChild(trinketArt);
+        }
+
         cell.innerHTML = `
             <div class="hp-bar-container"><div class="hp-bar" style="width: 100%;"></div></div>
             <div class="stamina-bar-container"><div class="stamina-bar" style="width: 0%;"></div></div>
-            <pre class="character-art" style="color: ${character.color};">${finalArt}</pre>
             <div class="character-name">${character.name}</div>
         `;
+        cell.appendChild(artContainer);
     }
 
     function updateCharacterUI(character) {
@@ -185,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (staminaBar) {
             const staminaPercent = (character.stats.stamina / character.stats.maxStamina) * 100;
-            staminaBar.style.width = `${staminaPercent}%`;
+            staminaBar.style.width = `${Math.max(0, staminaPercent)}%`;
         }
     }
 
@@ -229,6 +254,18 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             projectile.remove();
         }, 1000); // Match the transition duration in CSS
+    }
+
+    function triggerAnimation(character, animationClass) {
+        const cell = document.getElementById(character.cellId);
+        if (!cell) return;
+        const artContainer = cell.querySelector('.art-container');
+        if (!artContainer) return;
+
+        artContainer.classList.add(animationClass);
+        setTimeout(() => {
+            artContainer.classList.remove(animationClass);
+        }, 500); // Duration of the animation
     }
 
     function showGameOverModal(message) {
@@ -298,7 +335,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         logMessage(`${attacker.name} attacks ${defender.name}!`);
-        showProjectile(attacker, defender);
+        triggerAnimation(attacker, 'attack-shake');
+        setTimeout(() => showProjectile(attacker, defender), 250); // Delay projectile to sync with animation
+
 
         // --- Combat Resolution (same as before) ---
 
