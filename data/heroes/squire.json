@@ -1,11 +1,14 @@
 {
     "name": "Squire",
-    "art": "  O\n /|\\\n / \\",
+    "art": "  O\n  | \n / \\",
     "color": "lightblue",
     "stats": {
         "hp": 100,
         "strength": 10,
         "dexterity": 5,
         "blockChance": 0.1
+    },
+    "default_equipment": {
+        "weapon": "rusty_longsword"
     }
 }

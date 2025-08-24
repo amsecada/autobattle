@@ -1,0 +1,8 @@
+{
+    "name": "Rusty Longsword",
+    "type": "weapon",
+    "art": "  )\n  |\n  |",
+    "stats": {
+        "damage": [3, 5]
+    }
+}

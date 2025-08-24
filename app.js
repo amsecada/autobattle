@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statCardStrength = document.getElementById('stat-card-strength');
     const statCardDexterity = document.getElementById('stat-card-dexterity');
     const statCardStaminaGain = document.getElementById('stat-card-stamina-gain');
+    const statCardEquipment = document.getElementById('stat-card-equipment');
 
 
     // Game State
@@ -36,19 +37,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadAllCharacterData() {
         const heroFiles = ['squire', 'archer'];
-        const enemyFiles = ['gobgob']; // Add more enemy files here later
+        const enemyFiles = ['gobgob', 'gobgob_wizard'];
+        const equipmentFiles = ['rusty_longsword', 'rusty_crossbow', 'rusty_club'];
 
         const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
         const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
+        const equipmentPromises = equipmentFiles.map(name => loadJson(`data/equipment/${name}.json`));
 
-        const [heroData, enemyData] = await Promise.all([
+
+        const [heroData, enemyData, equipmentData] = await Promise.all([
             Promise.all(heroPromises),
-            Promise.all(enemyPromises)
+            Promise.all(enemyPromises),
+            Promise.all(equipmentPromises)
         ]);
 
-        const allData = {};
-        heroData.forEach(h => allData[h.name] = h);
-        enemyData.forEach(e => allData[e.name] = e);
+        const allData = {
+            characters: {},
+            equipment: {}
+        };
+        heroData.forEach(h => allData.characters[h.name] = h);
+        enemyData.forEach(e => allData.characters[e.name] = e);
+        equipmentData.forEach(e => allData.equipment[e.name.toLowerCase().replace(/ /g, '_')] = e);
 
         return allData;
     }
@@ -73,6 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.cellId = null;
             this.row = null;
             this.col = null;
+            this.equipment = {
+                weapon: null,
+                offhand: null,
+                trinket: null
+            };
         }
     }
 
@@ -104,6 +118,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     statCardDexterity.textContent = `Dexterity: ${character.stats.dexterity}`;
                     statCardStaminaGain.textContent = `Stamina Gain: ${character.stats.staminaGain.toFixed(2)}`;
 
+                    let equipmentText = 'Weapon: ';
+                    const { weapon, offhand, trinket } = character.equipment;
+                    if (weapon) {
+                        equipmentText += `${weapon.name} (${weapon.stats.damage[0]}-${weapon.stats.damage[1]} dmg)`;
+                    } else {
+                        equipmentText += 'None';
+                    }
+                    statCardEquipment.textContent = equipmentText;
+
                     statCard.style.left = `${event.pageX + 15}px`;
                     statCard.style.top = `${event.pageY + 15}px`;
                     statCard.style.display = 'block';
@@ -118,6 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getCompositedArt(character) {
+        let finalArt = character.art;
+        if (character.equipment.weapon) {
+            const charArtLines = finalArt.split('\n');
+            const weaponArtLines = character.equipment.weapon.art.split('\n');
+            finalArt = charArtLines.map((line, i) => line + (weaponArtLines[i] || '')).join('\n');
+        }
+        // Add offhand and trinket logic here later
+        return finalArt;
+    }
+
     function placeCharacter(character, side, cellIndex) {
         const cellId = `${side}-cell-${cellIndex}`;
         character.cellId = cellId;
@@ -127,10 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cellCharacterMap.set(cellId, character);
 
         const cell = document.getElementById(cellId);
+        const finalArt = getCompositedArt(character);
         cell.innerHTML = `
             <div class="hp-bar-container"><div class="hp-bar" style="width: 100%;"></div></div>
             <div class="stamina-bar-container"><div class="stamina-bar" style="width: 0%;"></div></div>
-            <pre class="character-art" style="color: ${character.color};">${character.art}</pre>
+            <pre class="character-art" style="color: ${character.color};">${finalArt}</pre>
             <div class="character-name">${character.name}</div>
         `;
     }
@@ -290,7 +325,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Calculate Damage
-        let damage = attacker.stats.strength;
+        let damage;
+        if (attacker.equipment.weapon && attacker.equipment.weapon.stats.damage) {
+            const [min, max] = attacker.equipment.weapon.stats.damage;
+            damage = Math.floor(Math.random() * (max - min + 1)) + min;
+        } else {
+            damage = attacker.stats.strength;
+        }
+
         const isCrit = Math.random() < (attacker.stats.strength / 100);
         if (isCrit) {
             damage = Math.round(damage * 1.5);
@@ -351,24 +393,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < 3; i++) {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
-            const heroData = characterDataStore[randomHeroType];
+            const heroData = characterDataStore.characters[randomHeroType];
             if (heroData) {
                 const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color);
+                if (heroData.default_equipment) {
+                    Object.keys(heroData.default_equipment).forEach(slot => {
+                        const equipmentName = heroData.default_equipment[slot];
+                        hero.equipment[slot] = characterDataStore.equipment[equipmentName];
+                    });
+                }
                 playerCharacters.push(hero);
                 placeCharacter(hero, 'player', heroPositions[i]);
                 logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
             }
         }
 
-        const gobgobData = characterDataStore['Gobgob'];
+        const enemyTypes = ['Gobgob', 'Gobgob Wizard'];
         const enemyPositions = [7, 12, 17]; // Middle column positions
 
-        if (gobgobData) {
-            for (let i = 0; i < 3; i++) {
-                const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats, gobgobData.color);
-                enemyCharacters.push(gobgob);
-                placeCharacter(gobgob, 'enemy', enemyPositions[i]);
-                logMessage(`A wild ${gobgob.name} appears!`, "lightcoral");
+        for (let i = 0; i < 3; i++) {
+            const randomEnemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            const enemyData = characterDataStore.characters[randomEnemyType];
+            if (enemyData) {
+                const enemy = new Character(enemyData.name, enemyData.art, enemyData.stats, enemyData.color);
+                if (enemyData.default_equipment) {
+                    Object.keys(enemyData.default_equipment).forEach(slot => {
+                        const equipmentName = enemyData.default_equipment[slot];
+                        enemy.equipment[slot] = characterDataStore.equipment[equipmentName];
+                    });
+                }
+                enemyCharacters.push(enemy);
+                placeCharacter(enemy, 'enemy', enemyPositions[i]);
+                logMessage(`A wild ${enemy.name} appears!`, "lightcoral");
             }
         }
 
