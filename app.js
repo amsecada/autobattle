@@ -141,10 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hpBar = cell.querySelector('.hp-bar');
         const staminaBar = cell.querySelector('.stamina-bar');
-        const hpPercent = (character.stats.hp / character.stats.maxHp) * 100;
-        const staminaPercent = (character.stats.stamina / character.stats.maxStamina) * 100;
-        hpBar.style.width = `${hpPercent}%`;
-        staminaBar.style.width = `${staminaPercent}%`;
+
+        if (hpBar) {
+            const hpPercent = (character.stats.hp / character.stats.maxHp) * 100;
+            hpBar.style.width = `${hpPercent}%`;
+        }
+
+        if (staminaBar) {
+            const staminaPercent = (character.stats.stamina / character.stats.maxStamina) * 100;
+            staminaBar.style.width = `${staminaPercent}%`;
+        }
     }
 
     function showFloatingText(character, text, type) {
@@ -280,9 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.getElementById(defender.cellId);
             if (cell) cell.innerHTML = ''; // Clear the cell
             cellCharacterMap.delete(defender.cellId); // Remove from map
+            checkGameOver(); // Check for game over only when a character is defeated
         }
-
-        checkGameOver();
     }
 
     function gameLoop() {
@@ -313,27 +318,30 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
-        const squireData = characterDataStore['Squire'];
-        const archerData = characterDataStore['Archer'];
-        const gobgobData = characterDataStore['Gobgob'];
+        const heroTypes = ['Squire', 'Archer'];
+        const heroPositions = [7, 12, 17]; // Middle column positions
 
-        if (squireData) {
-            const squire = new Character(squireData.name, squireData.art, squireData.stats);
-            playerCharacters.push(squire);
-            placeCharacter(squire, 'player', 12);
-            logMessage(`A ${squire.name} appears!`, "lightgreen");
+        for (let i = 0; i < 3; i++) {
+            const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
+            const heroData = characterDataStore[randomHeroType];
+            if (heroData) {
+                const hero = new Character(heroData.name, heroData.art, heroData.stats);
+                playerCharacters.push(hero);
+                placeCharacter(hero, 'player', heroPositions[i]);
+                logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
+            }
         }
-        if (archerData) {
-            const archer = new Character(archerData.name, archerData.art, archerData.stats);
-            playerCharacters.push(archer);
-            placeCharacter(archer, 'player', 22);
-             logMessage(`An ${archer.name} joins the fight!`, "lightgreen");
-        }
+
+        const gobgobData = characterDataStore['Gobgob'];
+        const enemyPositions = [7, 12, 17]; // Middle column positions
+
         if (gobgobData) {
-            const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats);
-            enemyCharacters.push(gobgob);
-            placeCharacter(gobgob, 'enemy', 12);
-            logMessage(`A wild ${gobgob.name} approaches!`, "lightcoral");
+            for (let i = 0; i < 3; i++) {
+                const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats);
+                enemyCharacters.push(gobgob);
+                placeCharacter(gobgob, 'enemy', enemyPositions[i]);
+                logMessage(`A wild ${gobgob.name} appears!`, "lightcoral");
+            }
         }
 
         gameRunning = true;
