@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Autobattler</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="main-menu">
+        <h1>ASCII Autobattler</h1>
+        <button id="start-game">Start Game</button>
+        <button id="settings">Settings</button>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div id="battle-screen">
+            <div id="player-side">
+                <h2>Your Team</h2>
+                <div id="player-grid" class="grid"></div>
+            </div>
+            <div id="enemy-side">
+                <h2>Enemy Team</h2>
+                <div id="enemy-grid" class="grid"></div>
+            </div>
+        </div>
+        <div id="combat-log-container">
+            <h3>Combat Log</h3>
+            <div id="combat-log"></div>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2 id="game-over-message"></h2>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
