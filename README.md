@@ -31,16 +31,33 @@ Character stats, names, and art are defined in JSON files located in the `data/`
 {
     "name": "Character Name",
     "art": "ASCII art for the character",
+    "color": "css-color-name",
     "stats": {
         "hp": 100,
         "strength": 10,
         "dexterity": 5,
+        "intelligence": 5,
         "blockChance": 0.1
-    }
+    },
+    "abilities": [
+        {
+            "name": "Ability Name",
+            "cooldown": 5000,
+            "type": "damage|heal"
+        }
+    ]
 }
 ```
 
-### 3.2. Game Loop
+-   **`intelligence`**: A new stat that influences the power of magical abilities (like healing and magic attacks) and provides resistance against incoming magic damage.
+-   **`abilities`**: An array of special moves a character can perform. Each ability has a name, a cooldown in milliseconds, and a type.
+
+### 3.2. New Characters
+
+-   **Priest (Hero)**: A supportive hero who can perform a weak melee attack or heal a friendly character with their "First Aid" ability. Their healing power is determined by their `intelligence`.
+-   **Gobgob Wizard (Enemy)**: A magic-wielding enemy who can cast "Magic Missile" for significant damage or perform a weak melee attack. Their magic damage is based on their `intelligence`.
+
+### 3.3. Game Loop & Cooldowns
 
 The game operates on a continuous loop managed by `requestAnimationFrame(gameLoop)`. In each frame, the loop iterates through all characters on the battlefield.
 

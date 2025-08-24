@@ -22,9 +22,20 @@ Each character is defined by a set of core stats that influence their performanc
 - **`dexterity`**: A versatile stat that influences:
     - **Stamina Gain**: Higher dexterity leads to faster turns.
     - **Dodge Chance**: `dexterity / 100`
+- **`intelligence`**: A stat for magical effects.
+    - **Magic Damage**: Increases damage of magic abilities (e.g., `damage = intelligence * 2`).
+    - **Healing Power**: Increases the amount healed by abilities (e.g., `heal = intelligence * 1.5`).
+    - **Magic Resistance**: Reduces incoming magic damage (e.g., `finalDamage = incomingDamage * (1 - intelligence / 100)`).
 - **`blockChance`**: A direct percentage chance to block an incoming attack, negating all damage.
 
-## 3. Targeting AI
+## 3. Abilities and Cooldowns
+
+Characters can now have special abilities defined in their data files. These abilities are governed by a cooldown system.
+
+- **`abilities`**: An array in the character's JSON defining their special moves.
+- **`cooldowns`**: A timestamp-based system. When an ability is used, the game records the time when it will be available again. A character cannot use an ability if it is on cooldown.
+
+## 4. Targeting AI
 
 Characters have predefined targeting logic.
 

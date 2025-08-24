@@ -6,6 +6,8 @@
         "hp": 80,
         "strength": 15,
         "dexterity": 2,
+        "intelligence": 5,
         "blockChance": 0.05
-    }
+    },
+    "abilities": []
 }

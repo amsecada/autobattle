@@ -198,6 +198,10 @@ button:hover {
     color: red;
 }
 
+.floating-text.heal {
+    color: #4caf50; /* Green */
+}
+
 .floating-text.crit {
     color: orange;
     font-size: 2rem;

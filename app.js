@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const statCardHp = document.getElementById('stat-card-hp');
     const statCardStrength = document.getElementById('stat-card-strength');
     const statCardDexterity = document.getElementById('stat-card-dexterity');
+    const statCardIntelligence = document.getElementById('stat-card-intelligence');
     const statCardStaminaGain = document.getElementById('stat-card-stamina-gain');
+    const statCardCooldowns = document.getElementById('stat-card-cooldowns');
 
 
     // Game State
@@ -35,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAllCharacterData() {
-        const heroFiles = ['squire', 'archer'];
-        const enemyFiles = ['gobgob']; // Add more enemy files here later
+        const heroFiles = ['squire', 'archer', 'priest'];
+        const enemyFiles = ['gobgob', 'gobgob-wizard']; // Add more enemy files here later
 
         const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
         const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
@@ -56,9 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Character Class
     class Character {
-        constructor(name, art, stats, color = '#f0f0f0') {
+        constructor(name, art, stats, abilities, color = '#f0f0f0') {
             this.name = name;
             this.art = art;
+            this.abilities = abilities || [];
+            this.cooldowns = {}; // Key: ability name, Value: timestamp when it's available again
             this.color = color;
             this.stats = {
                 maxHp: stats.hp,
@@ -67,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maxStamina: 100,
                 strength: stats.strength,
                 dexterity: stats.dexterity,
+                intelligence: stats.intelligence,
                 blockChance: stats.blockChance,
                 staminaGain: (1 + (stats.dexterity / 5)) * 0.7
             };
@@ -102,7 +107,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     statCardHp.textContent = `HP: ${character.stats.hp} / ${character.stats.maxHp}`;
                     statCardStrength.textContent = `Strength: ${character.stats.strength}`;
                     statCardDexterity.textContent = `Dexterity: ${character.stats.dexterity}`;
+                    statCardIntelligence.textContent = `Intelligence: ${character.stats.intelligence}`;
                     statCardStaminaGain.textContent = `Stamina Gain: ${character.stats.staminaGain.toFixed(2)}`;
+
+                    // Display Cooldowns
+                    let cooldownsText = 'Cooldowns:';
+                    const now = Date.now();
+                    let hasCooldowns = false;
+                    for (const ability of character.abilities) {
+                        const cd = character.cooldowns[ability.name];
+                        if (cd && cd > now) {
+                            const remaining = ((cd - now) / 1000).toFixed(1);
+                            cooldownsText += `\n- ${ability.name}: ${remaining}s`;
+                            hasCooldowns = true;
+                        }
+                    }
+                    if (!hasCooldowns) {
+                        cooldownsText += ' None';
+                    }
+                    statCardCooldowns.textContent = cooldownsText;
+
 
                     statCard.style.left = `${event.pageX + 15}px`;
                     statCard.style.top = `${event.pageY + 15}px`;
@@ -170,6 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000); // Corresponds to animation duration
     }
 
+    function isAbilityReady(character, abilityName) {
+        const now = Date.now();
+        const cooldown = character.cooldowns[abilityName] || 0;
+        return now >= cooldown;
+    }
+
     function showProjectile(source, target) {
         const projectile = document.createElement('div');
         projectile.classList.add('projectile');
@@ -228,10 +258,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Advanced Targeting Logic ---
         if (isPlayer) {
+             // PRIEST HEALING LOGIC
+            if (attacker.name === 'Priest' && isAbilityReady(attacker, 'First Aid')) {
+                const friendlyTargets = playerCharacters.filter(c => c.stats.hp > 0 && c.stats.hp < c.stats.maxHp);
+                if (friendlyTargets.length > 0) {
+                    // Find friend with the lowest HP percentage
+                    const healTarget = friendlyTargets.sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp))[0];
+
+                    const healAmount = Math.round(attacker.stats.intelligence * 1.5);
+                    healTarget.stats.hp += healAmount;
+                    if (healTarget.stats.hp > healTarget.stats.maxHp) {
+                        healTarget.stats.hp = healTarget.stats.maxHp;
+                    }
+
+                    logMessage(`${attacker.name} uses First Aid on ${healTarget.name}, restoring ${healAmount} HP.`, 'lightgreen');
+                    showFloatingText(healTarget, `+${healAmount}`, 'heal');
+
+                    // Set cooldown
+                    const ability = attacker.abilities.find(a => a.name === 'First Aid');
+                    attacker.cooldowns['First Aid'] = Date.now() + ability.cooldown;
+                    return; // End turn after healing
+                }
+            }
+
             const enemyColumns = [...new Set(livingTargets.map(t => t.col))];
             const frontColumn = Math.min(...enemyColumns);
 
-            if (attacker.name === 'Squire') {
+            if (attacker.name === 'Squire' || attacker.name === 'Priest') { // Priest uses Squire targeting for attacks
                 let frontLineTargets = livingTargets.filter(t => t.col === frontColumn);
                 if (frontLineTargets.length > 0) {
                     // Attack the one with the lowest HP in the front line
@@ -251,6 +304,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Default Targeting (for enemies or if no specific target was found) ---
         if (!defender) {
+            // GOBGOB WIZARD LOGIC
+            if (attacker.name === 'Gobgob Wizard' && isAbilityReady(attacker, 'Magic Missile')) {
+                // Target a random living player
+                defender = livingTargets[Math.floor(Math.random() * livingTargets.length)];
+
+                logMessage(`${attacker.name} casts Magic Missile at ${defender.name}!`, 'violet');
+                showProjectile(attacker, defender); // Re-use projectile for missile effect
+
+                // Calculate magic damage
+                let damage = attacker.stats.intelligence * 2; // Magic damage scales with intelligence
+                // Magic resistance from defender's intelligence
+                const resistance = 1 - (defender.stats.intelligence / 100);
+                damage = Math.round(damage * resistance);
+
+                defender.stats.hp -= damage;
+                logMessage(`${defender.name} takes ${damage} magic damage.`, 'fuchsia');
+                showFloatingText(defender, `-${damage}`, 'damage'); // Can add a new 'magic' class later
+
+                if (defender.stats.hp < 0) defender.stats.hp = 0;
+
+                 // Set cooldown
+                const ability = attacker.abilities.find(a => a.name === 'Magic Missile');
+                attacker.cooldowns['Magic Missile'] = Date.now() + ability.cooldown;
+
+                // Check for defeat
+                if (defender.stats.hp <= 0) {
+                    logMessage(`${defender.name} has been defeated!`, 'gray');
+                    const cell = document.getElementById(defender.cellId);
+                    if (cell) cell.innerHTML = ''; // Clear the cell
+                    cellCharacterMap.delete(defender.cellId); // Remove from map
+                    checkGameOver();
+                }
+                return; // End turn
+            }
+
+
             // Default: attack closest (lowest row, then lowest col)
              defender = livingTargets.sort((a, b) => {
                 if (a.row !== b.row) return a.row - b.row;
@@ -353,22 +442,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
             const heroData = characterDataStore[randomHeroType];
             if (heroData) {
-                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color);
+                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.abilities, heroData.color);
                 playerCharacters.push(hero);
                 placeCharacter(hero, 'player', heroPositions[i]);
                 logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
             }
         }
 
-        const gobgobData = characterDataStore['Gobgob'];
+        const enemyTypes = ['Gobgob', 'Gobgob Wizard'];
         const enemyPositions = [7, 12, 17]; // Middle column positions
 
-        if (gobgobData) {
-            for (let i = 0; i < 3; i++) {
-                const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats, gobgobData.color);
-                enemyCharacters.push(gobgob);
-                placeCharacter(gobgob, 'enemy', enemyPositions[i]);
-                logMessage(`A wild ${gobgob.name} appears!`, "lightcoral");
+        for (let i = 0; i < 3; i++) {
+            const randomEnemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            const enemyData = characterDataStore[randomEnemyType];
+            if (enemyData) {
+                const enemy = new Character(enemyData.name, enemyData.art, enemyData.stats, enemyData.abilities, enemyData.color);
+                enemyCharacters.push(enemy);
+                placeCharacter(enemy, 'enemy', enemyPositions[i]);
+                logMessage(`A wild ${enemy.name} appears!`, "lightcoral");
             }
         }
 

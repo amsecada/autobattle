@@ -1,0 +1,19 @@
+{
+    "name": "Gobgob Wizard",
+    "art": "  o\n /}\\ \n ´ `",
+    "color": "purple",
+    "stats": {
+        "hp": 60,
+        "strength": 3,
+        "dexterity": 5,
+        "intelligence": 10,
+        "blockChance": 0
+    },
+    "abilities": [
+        {
+            "name": "Magic Missile",
+            "cooldown": 15000,
+            "type": "damage"
+        }
+    ]
+}

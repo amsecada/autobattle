@@ -1,0 +1,19 @@
+{
+    "name": "Priest",
+    "art": "  +\n /O\\\n/|\\",
+    "color": "white",
+    "stats": {
+        "hp": 80,
+        "strength": 4,
+        "dexterity": 6,
+        "intelligence": 12,
+        "blockChance": 0.05
+    },
+    "abilities": [
+        {
+            "name": "First Aid",
+            "cooldown": 8000,
+            "type": "heal"
+        }
+    ]
+}
