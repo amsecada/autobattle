@@ -70,3 +70,16 @@ The game operates on a continuous loop managed by `requestAnimationFrame(gameLoo
     - To change core mechanics like stamina gain, damage formulas, or miss/dodge/block chances, edit the relevant functions in `app.js`.
 - **Modifying the Grid**:
     - The grid size is hardcoded in the `createGrid` function in `app.js` (currently 25 cells, representing a 5x5 grid). To change the grid size, you would need to update this function and adjust the CSS in `style.css` accordingly.
+
+## 5. New Features
+
+### 5.1. Death Animation
+
+A death animation has been added to the game. When a character is defeated, they will explode into their ASCII components. These components will then "evaporate" in a pixelated way.
+
+### 5.2. Settings
+
+A new settings modal has been added to the game. It can be accessed by clicking the "Settings" button on the main menu. The following settings are available:
+
+-   **Blood Mode**: On/Off. Adds additional blood stylings to the death sequence.
+-   **Explosion / Gore Level**: Low, Medium, High, Extreme. Determines the velocity and amount of blood during the death sequence.

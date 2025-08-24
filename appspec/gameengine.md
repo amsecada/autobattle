@@ -46,3 +46,18 @@ When an attack is initiated, the engine follows these steps in order. If any ste
 2.  **Dodge**: The defender attempts to dodge based on their `dexterity`.
 3.  **Block**: The defender attempts to block based on their `blockChance`.
 4.  **Damage Dealt**: If the attack connects, damage is calculated based on the attacker's `strength` and applied to the defender's `hp`. Critical hits are also calculated at this stage.
+
+## 5. Death Animation
+
+When a character's HP reaches 0, a death animation is triggered.
+
+-   **ASCII Explosion**: The character's art is deconstructed into its component ASCII characters.
+-   **Particle System**: Each character becomes a particle that is animated to fly outwards from the character's original position.
+-   **Evaporation**: The particles fade out over time to clear the game board.
+
+## 6. Settings
+
+The following settings are available to the player:
+
+-   **Blood Mode**: On/Off. When on, additional blood particles (red dots and asterisks) are added to the death animation.
+-   **Explosion / Gore Level**: Low, Medium, High, Extreme. This setting controls the velocity and number of particles in the death animation.
