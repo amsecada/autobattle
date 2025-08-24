@@ -1,0 +1,10 @@
+{
+    "name": "Archer",
+    "art": "  o\n-(|)->\n / \\",
+    "stats": {
+        "hp": 80,
+        "strength": 15,
+        "dexterity": 2,
+        "blockChance": 0.05
+    }
+}

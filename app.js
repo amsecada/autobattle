@@ -10,23 +10,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameOverModal = document.getElementById('game-over-modal');
     const gameOverMessage = document.getElementById('game-over-message');
     const playAgainBtn = document.getElementById('play-again-btn');
+    const statCard = document.getElementById('stat-card');
+    const statCardName = document.getElementById('stat-card-name');
+    const statCardHp = document.getElementById('stat-card-hp');
+    const statCardStrength = document.getElementById('stat-card-strength');
+    const statCardDexterity = document.getElementById('stat-card-dexterity');
+    const statCardStaminaGain = document.getElementById('stat-card-stamina-gain');
+
 
     // Game State
     let gameRunning = false;
     const playerCharacters = [];
     const enemyCharacters = [];
+    let characterDataStore = {}; // To hold loaded JSON data
+    const cellCharacterMap = new Map();
 
-    // Character Art
-    const SQUIRE_ART = `
-  O
- /|\\
- / \\
-`;
-    const GOBGOB_ART = `
-  o
- /j\\
-  "
-`;
+    // --- Data Loading ---
+    async function loadJson(filePath) {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${filePath}: ${response.statusText}`);
+        }
+        return response.json();
+    }
+
+    async function loadAllCharacterData() {
+        const heroFiles = ['squire', 'archer'];
+        const enemyFiles = ['gobgob']; // Add more enemy files here later
+
+        const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
+        const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
+
+        const [heroData, enemyData] = await Promise.all([
+            Promise.all(heroPromises),
+            Promise.all(enemyPromises)
+        ]);
+
+        const allData = {};
+        heroData.forEach(h => allData[h.name] = h);
+        enemyData.forEach(e => allData[e.name] = e);
+
+        return allData;
+    }
+
 
     // Character Class
     class Character {
@@ -44,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 staminaGain: (1 + (stats.dexterity / 5)) * 0.7
             };
             this.cellId = null;
+            this.row = null;
+            this.col = null;
         }
     }
 
@@ -60,10 +88,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createGrid(gridElement, side) {
         gridElement.innerHTML = '';
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 25; i++) {
             const cell = document.createElement('div');
             cell.classList.add('grid-cell');
-            cell.id = `${side}-cell-${i}`;
+            const cellId = `${side}-cell-${i}`;
+            cell.id = cellId;
+
+            cell.addEventListener('mouseover', (event) => {
+                if (cellCharacterMap.has(cellId)) {
+                    const character = cellCharacterMap.get(cellId);
+                    statCardName.textContent = character.name;
+                    statCardHp.textContent = `HP: ${character.stats.hp} / ${character.stats.maxHp}`;
+                    statCardStrength.textContent = `Strength: ${character.stats.strength}`;
+                    statCardDexterity.textContent = `Dexterity: ${character.stats.dexterity}`;
+                    statCardStaminaGain.textContent = `Stamina Gain: ${character.stats.staminaGain.toFixed(2)}`;
+
+                    statCard.style.left = `${event.pageX + 15}px`;
+                    statCard.style.top = `${event.pageY + 15}px`;
+                    statCard.style.display = 'block';
+                }
+            });
+
+            cell.addEventListener('mouseout', () => {
+                statCard.style.display = 'none';
+            });
+
             gridElement.appendChild(cell);
         }
     }
@@ -71,6 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function placeCharacter(character, side, cellIndex) {
         const cellId = `${side}-cell-${cellIndex}`;
         character.cellId = cellId;
+        character.row = Math.floor(cellIndex / 5);
+        character.col = cellIndex % 5;
+
+        cellCharacterMap.set(cellId, character);
+
         const cell = document.getElementById(cellId);
         cell.innerHTML = `
             <div class="hp-bar-container"><div class="hp-bar" style="width: 100%;"></div></div>
@@ -134,11 +188,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetSide = isPlayer ? enemyCharacters : playerCharacters;
         const attacker = character;
 
-        const livingTargets = targetSide.filter(t => t.stats.hp > 0);
+        let livingTargets = targetSide.filter(t => t.stats.hp > 0);
         if (livingTargets.length === 0) return;
 
-        const defender = livingTargets[0];
+        let defender;
+
+        // --- Advanced Targeting Logic ---
+        if (isPlayer) {
+            const enemyColumns = [...new Set(livingTargets.map(t => t.col))];
+            const frontColumn = Math.min(...enemyColumns);
+
+            if (attacker.name === 'Squire') {
+                let frontLineTargets = livingTargets.filter(t => t.col === frontColumn);
+                if (frontLineTargets.length > 0) {
+                    // Attack the one with the lowest HP in the front line
+                    defender = frontLineTargets.sort((a, b) => a.stats.hp - b.stats.hp)[0];
+                }
+            } else if (attacker.name === 'Archer') {
+                let backLineTargets = livingTargets.filter(t => t.col !== frontColumn);
+                if (backLineTargets.length > 0) {
+                     // Attack the one with the lowest HP in the back line
+                    defender = backLineTargets.sort((a, b) => a.stats.hp - b.stats.hp)[0];
+                } else {
+                    // If no back line, archer can hit the front line
+                    defender = livingTargets.sort((a, b) => a.stats.hp - b.stats.hp)[0];
+                }
+            }
+        }
+
+        // --- Default Targeting (for enemies or if no specific target was found) ---
+        if (!defender) {
+            // Default: attack closest (lowest row, then lowest col)
+             defender = livingTargets.sort((a, b) => {
+                if (a.row !== b.row) return a.row - b.row;
+                return a.col - b.col;
+            })[0];
+        }
+
+        if (!defender) { // Should not happen if livingTargets > 0, but as a safeguard.
+            return;
+        }
+
         logMessage(`${attacker.name} attacks ${defender.name}!`);
+
+        // --- Combat Resolution (same as before) ---
 
         // Handle Miss
         if (Math.random() < 0.10) {
@@ -184,6 +277,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check for defeat
         if (defender.stats.hp <= 0) {
             logMessage(`${defender.name} has been defeated!`, 'gray');
+            const cell = document.getElementById(defender.cellId);
+            if (cell) cell.innerHTML = ''; // Clear the cell
+            cellCharacterMap.delete(defender.cellId); // Remove from map
         }
 
         checkGameOver();
@@ -212,20 +308,33 @@ document.addEventListener('DOMContentLoaded', () => {
         combatLog.innerHTML = '';
         playerCharacters.length = 0;
         enemyCharacters.length = 0;
+        cellCharacterMap.clear();
 
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
-        const squire = new Character('Squire', SQUIRE_ART, { hp: 100, strength: 10, dexterity: 5, blockChance: 0.1 });
-        const gobgob = new Character('Gobgob', GOBGOB_ART, { hp: 80, strength: 8, dexterity: 8, blockChance: 0.05 });
-        playerCharacters.push(squire);
-        enemyCharacters.push(gobgob);
+        const squireData = characterDataStore['Squire'];
+        const archerData = characterDataStore['Archer'];
+        const gobgobData = characterDataStore['Gobgob'];
 
-        placeCharacter(squire, 'player', 4);
-        placeCharacter(gobgob, 'enemy', 4);
-
-        logMessage("A Squire appears!", "lightgreen");
-        logMessage("A wild Gobgob approaches!", "lightcoral");
+        if (squireData) {
+            const squire = new Character(squireData.name, squireData.art, squireData.stats);
+            playerCharacters.push(squire);
+            placeCharacter(squire, 'player', 12);
+            logMessage(`A ${squire.name} appears!`, "lightgreen");
+        }
+        if (archerData) {
+            const archer = new Character(archerData.name, archerData.art, archerData.stats);
+            playerCharacters.push(archer);
+            placeCharacter(archer, 'player', 22);
+             logMessage(`An ${archer.name} joins the fight!`, "lightgreen");
+        }
+        if (gobgobData) {
+            const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats);
+            enemyCharacters.push(gobgob);
+            placeCharacter(gobgob, 'enemy', 12);
+            logMessage(`A wild ${gobgob.name} approaches!`, "lightcoral");
+        }
 
         gameRunning = true;
         requestAnimationFrame(gameLoop);
@@ -233,10 +342,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
 
-    startGameBtn.addEventListener('click', () => {
+    startGameBtn.addEventListener('click', async () => {
         mainMenu.style.display = 'none';
         gameContainer.style.display = 'block';
-        setupGame();
+
+        try {
+            characterDataStore = await loadAllCharacterData();
+            setupGame();
+        } catch (error) {
+            console.error("Failed to load character data:", error);
+            logMessage("Error: Could not load game data. Please refresh.", "red");
+        }
     });
 
     settingsBtn.addEventListener('click', () => {
@@ -244,6 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playAgainBtn.addEventListener('click', () => {
+        // This also needs to be async or handle data loading appropriately
+        // For now, let's just restart with the already loaded data.
         gameOverModal.style.display = 'none';
         setupGame();
     });
