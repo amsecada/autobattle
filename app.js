@@ -141,10 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hpBar = cell.querySelector('.hp-bar');
         const staminaBar = cell.querySelector('.stamina-bar');
-        const hpPercent = (character.stats.hp / character.stats.maxHp) * 100;
-        const staminaPercent = (character.stats.stamina / character.stats.maxStamina) * 100;
-        hpBar.style.width = `${hpPercent}%`;
-        staminaBar.style.width = `${staminaPercent}%`;
+
+        if (hpBar) {
+            const hpPercent = (character.stats.hp / character.stats.maxHp) * 100;
+            hpBar.style.width = `${hpPercent}%`;
+        }
+
+        if (staminaBar) {
+            const staminaPercent = (character.stats.stamina / character.stats.maxStamina) * 100;
+            staminaBar.style.width = `${staminaPercent}%`;
+        }
     }
 
     function showFloatingText(character, text, type) {
@@ -280,9 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.getElementById(defender.cellId);
             if (cell) cell.innerHTML = ''; // Clear the cell
             cellCharacterMap.delete(defender.cellId); // Remove from map
+            checkGameOver(); // Check for game over only when a character is defeated
         }
-
-        checkGameOver();
     }
 
     function gameLoop() {
