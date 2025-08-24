@@ -17,6 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const statCardDexterity = document.getElementById('stat-card-dexterity');
     const statCardStaminaGain = document.getElementById('stat-card-stamina-gain');
     const statCardEquipment = document.getElementById('stat-card-equipment');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings');
+    const bloodModeSelect = document.getElementById('blood-mode');
+    const goreLevelSelect = document.getElementById('gore-level');
+
+
+    // Game Settings
+    let bloodMode = 'off';
+    let goreLevel = 'medium';
 
 
     // Game State
@@ -392,11 +401,62 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check for defeat
         if (defender.stats.hp <= 0) {
             logMessage(`${defender.name} has been defeated!`, 'gray');
-            const cell = document.getElementById(defender.cellId);
-            if (cell) cell.innerHTML = ''; // Clear the cell
+            triggerDeathAnimation(defender);
             cellCharacterMap.delete(defender.cellId); // Remove from map
             checkGameOver(); // Check for game over only when a character is defeated
         }
+    }
+
+    function triggerDeathAnimation(character) {
+        const cell = document.getElementById(character.cellId);
+        if (!cell) return;
+
+        // Clear the cell content but keep the cell itself for the animation
+        cell.innerHTML = '';
+
+        const goreSettings = {
+            low: { velocity: 50, count: 5 },
+            medium: { velocity: 100, count: 10 },
+            high: { velocity: 150, count: 20 },
+            extreme: { velocity: 250, count: 30 },
+        };
+
+        const settings = goreSettings[goreLevel];
+        const art = character.art;
+        const particles = art.split('').filter(char => char.trim() !== '');
+
+        if (bloodMode === 'on') {
+            for (let i = 0; i < settings.count; i++) {
+                particles.push(Math.random() > 0.5 ? '*' : '.');
+            }
+        }
+
+        particles.forEach(p => {
+            const particle = document.createElement('div');
+            particle.classList.add('death-particle');
+            particle.textContent = p;
+            particle.style.color = (p === '*' || p === '.') ? 'red' : character.color;
+
+            cell.appendChild(particle);
+
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * settings.velocity;
+            const x = Math.cos(angle) * velocity;
+            const y = Math.sin(angle) * velocity;
+
+            particle.style.setProperty('--death-transform', `translate(${x}px, ${y}px)`);
+
+            setTimeout(() => {
+                particle.remove();
+            }, 1500); // Match animation duration
+        });
+
+        // After a delay, clear the cell completely to allow for reuse
+        setTimeout(() => {
+            if (document.getElementById(character.cellId)) {
+                 document.getElementById(character.cellId).innerHTML = '';
+            }
+        }, 1600);
     }
 
     function gameLoop() {
@@ -487,7 +547,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     settingsBtn.addEventListener('click', () => {
-        alert('Settings clicked! This feature is not yet implemented.');
+        settingsModal.style.display = 'flex';
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+
+    bloodModeSelect.addEventListener('change', (e) => {
+        bloodMode = e.target.value;
+    });
+
+    goreLevelSelect.addEventListener('change', (e) => {
+        goreLevel = e.target.value;
     });
 
     playAgainBtn.addEventListener('click', () => {

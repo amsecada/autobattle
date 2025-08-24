@@ -47,5 +47,28 @@
         <p id="stat-card-stamina-gain"></p>
         <p id="stat-card-equipment"></p>
     </div>
+
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="setting">
+                <label for="blood-mode">Blood Mode</label>
+                <select id="blood-mode">
+                    <option value="on">On</option>
+                    <option value="off" selected>Off</option>
+                </select>
+            </div>
+            <div class="setting">
+                <label for="gore-level">Explosion / Gore Level</label>
+                <select id="gore-level">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                    <option value="extreme">Extreme</option>
+                </select>
+            </div>
+            <button id="close-settings">Close</button>
+        </div>
+    </div>
 </body>
 </html>
