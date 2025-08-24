@@ -170,3 +170,51 @@ button:hover {
     color: #1a1a1a;
     border: none;
 }
+
+/* --- Floating Text --- */
+.floating-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    font-weight: bold;
+    pointer-events: none;
+    animation: float-up 1s ease-out forwards;
+}
+
+@keyframes float-up {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, -50px);
+    }
+}
+
+.floating-text.damage {
+    color: red;
+}
+
+.floating-text.crit {
+    color: orange;
+    font-size: 2rem;
+}
+
+.floating-text.miss {
+    color: yellow;
+    font-style: italic;
+}
+
+.floating-text.dodge {
+    color: cyan;
+    animation: float-up 1s ease-out forwards, side-to-side 0.5s ease-in-out forwards;
+}
+
+@keyframes side-to-side {
+    0%, 100% { transform: translateX(-50%); }
+    25% { transform: translateX(-60%); }
+    75% { transform: translateX(-40%); }
+}

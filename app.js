@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 strength: stats.strength,
                 dexterity: stats.dexterity,
                 blockChance: stats.blockChance,
-                staminaGain: 1 + (stats.dexterity / 5)
+                staminaGain: (1 + (stats.dexterity / 5)) * 0.7
             };
             this.cellId = null;
         }
@@ -93,6 +93,22 @@ document.addEventListener('DOMContentLoaded', () => {
         staminaBar.style.width = `${staminaPercent}%`;
     }
 
+    function showFloatingText(character, text, type) {
+        const cell = document.getElementById(character.cellId);
+        if (!cell) return;
+
+        const textElement = document.createElement('div');
+        textElement.classList.add('floating-text', type);
+        textElement.textContent = text;
+
+        cell.appendChild(textElement);
+
+        // Remove the element after the animation ends
+        setTimeout(() => {
+            textElement.remove();
+        }, 1000); // Corresponds to animation duration
+    }
+
     function showGameOverModal(message) {
         gameOverMessage.textContent = message;
         gameOverModal.style.display = 'flex';
@@ -124,31 +140,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const defender = livingTargets[0];
         logMessage(`${attacker.name} attacks ${defender.name}!`);
 
+        // Handle Miss
         if (Math.random() < 0.10) {
             logMessage('...but it MISSED!', 'yellow');
-            return;
-        }
-        const dodgeChance = defender.stats.dexterity / 100;
-        if (Math.random() < dodgeChance) {
-            logMessage(`${defender.name} DODGED the attack!`, 'cyan');
-            return;
-        }
-        if (Math.random() < defender.stats.blockChance) {
-            logMessage(`${defender.name} BLOCKED the attack! No damage taken.`, 'lightblue');
+            showFloatingText(defender, 'MISS', 'miss');
             return;
         }
 
+        // Handle Dodge
+        const dodgeChance = defender.stats.dexterity / 100;
+        if (Math.random() < dodgeChance) {
+            logMessage(`${defender.name} DODGED the attack!`, 'cyan');
+            showFloatingText(defender, 'DODGE!', 'dodge');
+            return;
+        }
+
+        // Handle Block
+        if (Math.random() < defender.stats.blockChance) {
+            logMessage(`${defender.name} BLOCKED the attack! No damage taken.`, 'lightblue');
+            // Future: showFloatingText(defender, 'BLOCK', 'block');
+            return;
+        }
+
+        // Calculate Damage
         let damage = attacker.stats.strength;
-        const critChance = attacker.stats.strength / 100;
-        if (Math.random() < critChance) {
+        const isCrit = Math.random() < (attacker.stats.strength / 100);
+        if (isCrit) {
             damage = Math.round(damage * 1.5);
             logMessage(`A CRITICAL HIT!`, 'orange');
         }
 
+        // Apply Damage and show floating text
         defender.stats.hp -= damage;
         logMessage(`${defender.name} takes ${damage} damage.`, 'red');
+        if (isCrit) {
+            showFloatingText(defender, `-${damage}!!`, 'crit');
+        } else {
+            showFloatingText(defender, `-${damage}`, 'damage');
+        }
+
         if (defender.stats.hp < 0) defender.stats.hp = 0;
 
+        // Check for defeat
         if (defender.stats.hp <= 0) {
             logMessage(`${defender.name} has been defeated!`, 'gray');
         }
