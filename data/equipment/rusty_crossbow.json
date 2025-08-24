@@ -2,6 +2,7 @@
     "name": "Rusty Crossbow",
     "type": "weapon",
     "art": " --\n--+\n  >",
+    "color": "#8B4513",
     "stats": {
         "damage": [4, 6]
     }
