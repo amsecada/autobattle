@@ -1,6 +1,7 @@
 {
     "name": "Archer",
     "art": "  o\n-(|)->\n / \\",
+    "color": "lightgreen",
     "stats": {
         "hp": 80,
         "strength": 15,

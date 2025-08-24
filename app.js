@@ -56,9 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Character Class
     class Character {
-        constructor(name, art, stats) {
+        constructor(name, art, stats, color = '#f0f0f0') {
             this.name = name;
             this.art = art;
+            this.color = color;
             this.stats = {
                 maxHp: stats.hp,
                 hp: stats.hp,
@@ -129,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.innerHTML = `
             <div class="hp-bar-container"><div class="hp-bar" style="width: 100%;"></div></div>
             <div class="stamina-bar-container"><div class="stamina-bar" style="width: 0%;"></div></div>
-            <pre class="character-art">${character.art}</pre>
+            <pre class="character-art" style="color: ${character.color};">${character.art}</pre>
             <div class="character-name">${character.name}</div>
         `;
     }
@@ -167,6 +168,32 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             textElement.remove();
         }, 1000); // Corresponds to animation duration
+    }
+
+    function showProjectile(source, target) {
+        const projectile = document.createElement('div');
+        projectile.classList.add('projectile');
+        document.body.appendChild(projectile);
+
+        const sourceRect = document.getElementById(source.cellId).getBoundingClientRect();
+        const targetRect = document.getElementById(target.cellId).getBoundingClientRect();
+
+        const startX = sourceRect.left + sourceRect.width / 2;
+        const startY = sourceRect.top + sourceRect.height / 2;
+        const endX = targetRect.left + targetRect.width / 2;
+        const endY = targetRect.top + targetRect.height / 2;
+
+        projectile.style.left = `${startX}px`;
+        projectile.style.top = `${startY}px`;
+
+        // Force a reflow to apply the initial position before the transition
+        projectile.getBoundingClientRect();
+
+        projectile.style.transform = `translate(${endX - startX}px, ${endY - startY}px)`;
+
+        setTimeout(() => {
+            projectile.remove();
+        }, 1000); // Match the transition duration in CSS
     }
 
     function showGameOverModal(message) {
@@ -236,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         logMessage(`${attacker.name} attacks ${defender.name}!`);
+        showProjectile(attacker, defender);
 
         // --- Combat Resolution (same as before) ---
 
@@ -325,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
             const heroData = characterDataStore[randomHeroType];
             if (heroData) {
-                const hero = new Character(heroData.name, heroData.art, heroData.stats);
+                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color);
                 playerCharacters.push(hero);
                 placeCharacter(hero, 'player', heroPositions[i]);
                 logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
@@ -337,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (gobgobData) {
             for (let i = 0; i < 3; i++) {
-                const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats);
+                const gobgob = new Character(gobgobData.name, gobgobData.art, gobgobData.stats, gobgobData.color);
                 enemyCharacters.push(gobgob);
                 placeCharacter(gobgob, 'enemy', enemyPositions[i]);
                 logMessage(`A wild ${gobgob.name} appears!`, "lightcoral");

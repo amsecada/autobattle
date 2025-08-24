@@ -241,3 +241,15 @@ button:hover {
 .stat-card p {
     margin: 4px 0;
 }
+
+/* --- Projectile --- */
+.projectile {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background-color: red;
+    border-radius: 50%;
+    z-index: 200;
+    pointer-events: none;
+    transition: transform 1s ease-out;
+}
