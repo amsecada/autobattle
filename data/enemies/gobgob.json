@@ -1,11 +1,14 @@
 {
     "name": "Gobgob",
-    "art": "  o\n /j\\\n  \"",
+    "art": "  o\n  | \n  \"",
     "color": "green",
     "stats": {
         "hp": 80,
         "strength": 8,
         "dexterity": 8,
         "blockChance": 0.05
+    },
+    "default_equipment": {
+        "weapon": "rusty_longsword"
     }
 }

@@ -1,0 +1,8 @@
+{
+    "name": "Rusty Club",
+    "type": "weapon",
+    "art": "  o\n  |\n  |",
+    "stats": {
+        "damage": [2, 6]
+    }
+}

@@ -1,11 +1,14 @@
 {
     "name": "Archer",
-    "art": "  o\n-(|)->\n / \\",
+    "art": "  O\n  | \n / \\",
     "color": "lightgreen",
     "stats": {
         "hp": 80,
         "strength": 15,
         "dexterity": 2,
         "blockChance": 0.05
+    },
+    "default_equipment": {
+        "weapon": "rusty_crossbow"
     }
 }
