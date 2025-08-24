@@ -1,0 +1,10 @@
+{
+    "name": "Gobgob",
+    "art": "  o\n /j\\\n  \"",
+    "stats": {
+        "hp": 80,
+        "strength": 8,
+        "dexterity": 8,
+        "blockChance": 0.05
+    }
+}

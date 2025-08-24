@@ -1,0 +1,10 @@
+{
+    "name": "Squire",
+    "art": "  O\n /|\\\n / \\",
+    "stats": {
+        "hp": 100,
+        "strength": 10,
+        "dexterity": 5,
+        "blockChance": 0.1
+    }
+}
