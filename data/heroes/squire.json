@@ -1,6 +1,7 @@
 {
     "name": "Squire",
     "art": "  O\n /|\\\n / \\",
+    "color": "lightblue",
     "stats": {
         "hp": 100,
         "strength": 10,

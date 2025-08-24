@@ -1,6 +1,7 @@
 {
     "name": "Gobgob",
     "art": "  o\n /j\\\n  \"",
+    "color": "green",
     "stats": {
         "hp": 80,
         "strength": 8,
