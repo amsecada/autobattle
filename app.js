@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
-        const heroTypes = ['Squire', 'Archer'];
+        const heroTypes = ['Squire', 'Archer', 'Priest'];
         const heroPositions = [7, 12, 17]; // Middle column positions
 
         for (let i = 0; i < 3; i++) {
