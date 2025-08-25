@@ -1,7 +1,7 @@
 {
     "name": "Rusty Longsword",
     "type": "weapon",
-    "art": "  )\n  |\n  |",
+    "art": "  ^\n /-\\\n  |",
     "color": "#966F33",
     "stats": {
         "damage": [3, 5]
