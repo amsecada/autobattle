@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSettingsBtn = document.getElementById('close-settings');
     const bloodModeSelect = document.getElementById('blood-mode');
     const goreLevelSelect = document.getElementById('gore-level');
+    const bulletTimeSpeedInput = document.getElementById('bullet-time-speed');
+    const bulletTimeValueDisplay = document.getElementById('bullet-time-value');
     const abilityPanel = document.getElementById('ability-panel');
     const abilityPanelCharName = document.getElementById('ability-panel-char-name');
     const abilityPanelAbilities = document.getElementById('ability-panel-abilities');
@@ -32,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Game Settings
     let bloodMode = 'on';
     let goreLevel = 'medium';
+    let bulletTimeFactor = 0.25; // Default bullet time speed
 
 
     // Game State
@@ -245,17 +248,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         abilityPanel.style.display = 'block';
+        gameSpeed = bulletTimeFactor; // Slow down time when ability panel is open
     }
 
     abilityPanelClose.addEventListener('click', () => {
         abilityPanel.style.display = 'none';
+        if (!targetingState) { // Only resume speed if not also targeting
+            gameSpeed = 1.0;
+        }
     });
 
     function enterTargetingMode(source, ability) {
         if (targetingState) {
             exitTargetingMode(); // Clear any previous targeting state
         }
-        gameSpeed = 0.25; // Enter bullet time
+        gameSpeed = bulletTimeFactor; // Enter bullet time
 
         logMessage(`Select a target for ${source.name}'s ${ability.name}.`, 'yellow');
         document.body.classList.add('targeting-active');
@@ -341,7 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function exitTargetingMode() {
         if (!targetingState) return;
 
-        gameSpeed = 1.0; // Resume normal speed
+        // Only resume speed if the ability panel isn't also open
+        if (abilityPanel.style.display !== 'block') {
+            gameSpeed = 1.0; // Resume normal speed
+        }
         clearTimeout(targetingState.timeoutId);
         document.body.classList.remove('targeting-active');
         targetingState = null;
@@ -1221,6 +1231,17 @@ document.addEventListener('DOMContentLoaded', () => {
         goreLevel = e.target.value;
     });
 
+    bulletTimeSpeedInput.addEventListener('input', (e) => {
+        const speedValue = e.target.value;
+        bulletTimeFactor = speedValue / 100;
+        bulletTimeValueDisplay.textContent = `${speedValue}%`;
+
+        // If in a state where bullet time is active, update it instantly
+        if (targetingState || abilityPanel.style.display === 'block') {
+            gameSpeed = bulletTimeFactor;
+        }
+    });
+
     playAgainBtn.addEventListener('click', () => {
         // This also needs to be async or handle data loading appropriately
         // For now, let's just restart with the already loaded data.
@@ -1257,6 +1278,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             abilityPanel.style.display = 'none';
+            if (!targetingState) { // Only resume speed if not also targeting
+                gameSpeed = 1.0;
+            }
         }
 
         // Close settings modal if click is outside of it
