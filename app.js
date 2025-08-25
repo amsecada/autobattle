@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Game State
+    let gameSpeed = 1.0; // 1.0 is normal speed, 0.25 is bullet time
     let gameRunning = false;
     const playerCharacters = [];
     const enemyCharacters = [];
@@ -254,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetingState) {
             exitTargetingMode(); // Clear any previous targeting state
         }
+        gameSpeed = 0.25; // Enter bullet time
 
         logMessage(`Select a target for ${source.name}'s ${ability.name}.`, 'yellow');
         document.body.classList.add('targeting-active');
@@ -339,6 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function exitTargetingMode() {
         if (!targetingState) return;
 
+        gameSpeed = 1.0; // Resume normal speed
         clearTimeout(targetingState.timeoutId);
         document.body.classList.remove('targeting-active');
         targetingState = null;
@@ -1094,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Gain stamina
-                char.stats.stamina += char.stats.staminaGain;
+                char.stats.stamina += char.stats.staminaGain * gameSpeed;
                 if (char.stats.stamina >= char.stats.maxStamina) {
                     char.stats.stamina = char.stats.maxStamina;
 
@@ -1200,7 +1203,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    settingsBtn.addEventListener('click', () => {
+    settingsBtn.addEventListener('click', (event) => {
+        // Stop the click from bubbling up to the window listener
+        event.stopPropagation();
         settingsModal.style.display = 'flex';
     });
 
