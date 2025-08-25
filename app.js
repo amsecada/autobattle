@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Game Settings
-    let bloodMode = 'off';
+    let bloodMode = 'on';
     let goreLevel = 'medium';
 
 
