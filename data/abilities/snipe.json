@@ -1,0 +1,15 @@
+{
+    "name": "Snipe",
+    "cooldown": 1200,
+    "type": "damage",
+    "target": "enemy",
+    "potency": 4,
+    "description": "A targeted shot that deals 4x damage.",
+    "particles": {
+        "count": 1,
+        "velocity": 0,
+        "styles": [
+            { "char": "🎯", "color": "red" }
+        ]
+    }
+}

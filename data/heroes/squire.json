@@ -10,5 +10,6 @@
     },
     "default_equipment": {
         "weapon": "rusty_longsword"
-    }
+    },
+    "abilities": ["defend"]
 }
