@@ -1,0 +1,15 @@
+{
+    "name": "Priest",
+    "art": "  o\n /|\\\n / \\",
+    "color": "white",
+    "stats": {
+        "hp": 80,
+        "strength": 6,
+        "dexterity": 7,
+        "blockChance": 0.05
+    },
+    "abilities": [
+        "heal"
+    ],
+    "default_equipment": {}
+}

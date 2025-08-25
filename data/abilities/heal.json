@@ -1,0 +1,8 @@
+{
+    "name": "Heal",
+    "cooldown": 200,
+    "type": "healing",
+    "target": "ally",
+    "potency": 25,
+    "description": "Heals a friendly target for 25 HP."
+}

@@ -213,6 +213,10 @@ button:hover {
     color: red;
 }
 
+.floating-text.heal {
+    color: #4caf50; /* Green */
+}
+
 .floating-text.crit {
     color: orange;
     font-size: 2rem;
@@ -331,5 +335,135 @@ button:hover {
     100% {
         opacity: 0;
         transform: var(--death-transform) scale(0.5);
+    }
+}
+
+/* --- Ability Panel --- */
+.ability-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    background-color: #1a1a1a;
+    border: 2px solid #f0f0f0;
+    border-radius: 10px;
+    z-index: 150;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+#ability-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 10px;
+}
+
+#ability-panel-header h4 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: gold;
+}
+
+#ability-panel-close {
+    background: none;
+    border: none;
+    color: #f0f0f0;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+#ability-panel-abilities {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ability-button {
+    background-color: #333;
+    border: 1px solid #777;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: left;
+    cursor: pointer;
+    color: #f0f0f0;
+}
+
+.ability-button:hover {
+    background-color: #444;
+    border-color: #999;
+}
+
+.ability-button.on-cooldown {
+    background-color: #222;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.ability-button h5 {
+    margin: 0 0 5px 0;
+    font-size: 1.1rem;
+}
+
+.ability-button p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.ability-cooldown-timer {
+    font-style: italic;
+    color: #ff9999;
+}
+
+/* --- Ability Ready Flash --- */
+.ability-ready-flash {
+    animation: white-flash 0.5s ease-in-out;
+}
+
+@keyframes white-flash {
+    0%, 100% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(2) drop-shadow(0 0 5px white);
+    }
+}
+
+/* --- Ability Animation --- */
+.ability-zoom-container {
+    transition: transform 0.4s cubic-bezier(0.42, 0, 0.58, 1);
+}
+
+.magic-effect {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 100, 0.7);
+    box-shadow: 0 0 30px 20px rgba(255, 255, 0, 0.5);
+    pointer-events: none;
+    z-index: 300;
+    opacity: 0;
+    animation: magic-burst 0.5s ease-out forwards;
+}
+
+@keyframes magic-burst {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    80% {
+        transform: scale(2);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
     }
 }
