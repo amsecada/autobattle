@@ -206,10 +206,17 @@ body.targeting-active .grid-cell.valid-target {
     margin-right: 1rem;
 }
 
-.setting select {
+.setting select, .setting input[type="range"] {
     font-family: inherit;
     font-size: 1rem;
     padding: 0.25rem;
+    vertical-align: middle;
+}
+
+.setting span {
+    display: inline-block;
+    width: 40px;
+    text-align: right;
 }
 
 #play-again-btn {
