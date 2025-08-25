@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSettingsBtn = document.getElementById('close-settings');
     const bloodModeSelect = document.getElementById('blood-mode');
     const goreLevelSelect = document.getElementById('gore-level');
+    const abilityPanel = document.getElementById('ability-panel');
+    const abilityPanelCharName = document.getElementById('ability-panel-char-name');
+    const abilityPanelAbilities = document.getElementById('ability-panel-abilities');
+    const abilityPanelClose = document.getElementById('ability-panel-close');
 
 
     // Game Settings
@@ -34,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const enemyCharacters = [];
     let characterDataStore = {}; // To hold loaded JSON data
     const cellCharacterMap = new Map();
+    let targetingState = null; // { source, ability, timeoutId }
+    const abilityQueue = [];
 
     // --- Data Loading ---
     async function loadJson(filePath) {
@@ -45,28 +51,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAllCharacterData() {
-        const heroFiles = ['squire', 'archer'];
+        const heroFiles = ['squire', 'archer', 'priest'];
         const enemyFiles = ['gobgob', 'gobgob_wizard'];
         const equipmentFiles = ['rusty_longsword', 'rusty_crossbow', 'rusty_club'];
+        const abilityFiles = ['heal']; // Hardcode for now
 
         const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
         const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
         const equipmentPromises = equipmentFiles.map(name => loadJson(`data/equipment/${name}.json`));
+        const abilityPromises = abilityFiles.map(name => loadJson(`data/abilities/${name}.json`));
 
 
-        const [heroData, enemyData, equipmentData] = await Promise.all([
+        const [heroData, enemyData, equipmentData, abilityData] = await Promise.all([
             Promise.all(heroPromises),
             Promise.all(enemyPromises),
-            Promise.all(equipmentPromises)
+            Promise.all(equipmentPromises),
+            Promise.all(abilityPromises)
         ]);
 
         const allData = {
             characters: {},
-            equipment: {}
+            equipment: {},
+            abilities: {}
         };
         heroData.forEach(h => allData.characters[h.name] = h);
         enemyData.forEach(e => allData.characters[e.name] = e);
         equipmentData.forEach(e => allData.equipment[e.name.toLowerCase().replace(/ /g, '_')] = e);
+        abilityData.forEach(a => allData.abilities[a.name.toLowerCase()] = a);
 
         return allData;
     }
@@ -74,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Character Class
     class Character {
-        constructor(name, art, stats, color = '#f0f0f0') {
+        constructor(name, art, stats, color = '#f0f0f0', abilities = []) {
             this.name = name;
             this.art = art;
             this.color = color;
@@ -96,6 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 offhand: null,
                 trinket: null
             };
+            this.abilities = abilities;
+            this.cooldowns = {};
+            this.abilities.forEach(ability => {
+                this.cooldowns[ability.name] = 0;
+            });
         }
     }
 
@@ -146,8 +162,163 @@ document.addEventListener('DOMContentLoaded', () => {
                 statCard.style.display = 'none';
             });
 
+            cell.addEventListener('click', () => {
+                if (cellCharacterMap.has(cellId)) {
+                    const character = cellCharacterMap.get(cellId);
+                    // Only open for player characters
+                    if (playerCharacters.includes(character)) {
+                        openAbilityPanel(character);
+                    }
+                }
+            });
+
             gridElement.appendChild(cell);
         }
+    }
+
+    function openAbilityPanel(character) {
+        abilityPanelCharName.textContent = `${character.name}'s Abilities`;
+        abilityPanelAbilities.innerHTML = ''; // Clear previous abilities
+
+        if (character.abilities.length === 0) {
+            abilityPanelAbilities.innerHTML = '<p>No abilities.</p>';
+        } else {
+            character.abilities.forEach(ability => {
+                const abilityButton = document.createElement('div');
+                abilityButton.classList.add('ability-button');
+
+                const abilityName = document.createElement('h5');
+                abilityName.textContent = ability.name;
+
+                const abilityDesc = document.createElement('p');
+                abilityDesc.textContent = ability.description;
+
+                abilityButton.appendChild(abilityName);
+                abilityButton.appendChild(abilityDesc);
+
+                const cooldown = character.cooldowns[ability.name];
+                if (cooldown > 0) {
+                    abilityButton.classList.add('on-cooldown');
+                    const cooldownTimer = document.createElement('span');
+                    cooldownTimer.classList.add('ability-cooldown-timer');
+                    const secondsLeft = Math.ceil(cooldown / 60); // Assuming ~60 ticks per second
+                    cooldownTimer.textContent = `On Cooldown (${secondsLeft}s)`;
+                    abilityButton.appendChild(cooldownTimer);
+                } else {
+                    abilityButton.addEventListener('click', () => {
+                        enterTargetingMode(character, ability);
+                        abilityPanel.style.display = 'none'; // Close panel after selection
+                    });
+                }
+                abilityPanelAbilities.appendChild(abilityButton);
+            });
+        }
+
+        abilityPanel.style.display = 'block';
+    }
+
+    abilityPanelClose.addEventListener('click', () => {
+        abilityPanel.style.display = 'none';
+    });
+
+    function enterTargetingMode(source, ability) {
+        if (targetingState) {
+            exitTargetingMode(); // Clear any previous targeting state
+        }
+
+        logMessage(`Select a target for ${source.name}'s ${ability.name}.`, 'yellow');
+        document.body.style.cursor = 'crosshair';
+
+        const timeoutId = setTimeout(() => {
+            logMessage('Time ran out. Auto-selecting target.', 'gray');
+            autoTargetAbility();
+        }, 3000);
+
+        targetingState = { source, ability, timeoutId };
+
+        // Add listeners to the grids
+        playerGrid.addEventListener('click', handleTargetSelection);
+        enemyGrid.addEventListener('click', handleTargetSelection);
+    }
+
+    function handleTargetSelection(event) {
+        if (!targetingState) return;
+
+        const cell = event.target.closest('.grid-cell');
+        if (!cell) return;
+
+        const target = cellCharacterMap.get(cell.id);
+        if (!target) return;
+
+        const { source, ability } = targetingState;
+        const isPlayerTarget = playerCharacters.includes(target);
+
+        // Validate target
+        let isValidTarget = false;
+        if (ability.target === 'ally' && isPlayerTarget) {
+            isValidTarget = true;
+        } else if (ability.target === 'enemy' && !isPlayerTarget) {
+            isValidTarget = true;
+        } else if (ability.target === 'self' && target === source) {
+            isValidTarget = true;
+        }
+        // Add more conditions for 'any', etc. if needed
+
+        if (isValidTarget) {
+            logMessage(`${source.name} will use ${ability.name} on ${target.name}.`, 'lightblue');
+            queueAbility(source, target, ability);
+            exitTargetingMode();
+        } else {
+            logMessage('Invalid target selected.', 'tomato');
+        }
+    }
+
+    function exitTargetingMode() {
+        if (!targetingState) return;
+
+        clearTimeout(targetingState.timeoutId);
+        document.body.style.cursor = 'default';
+        targetingState = null;
+
+        playerGrid.removeEventListener('click', handleTargetSelection);
+        enemyGrid.removeEventListener('click', handleTargetSelection);
+    }
+
+    function autoTargetAbility() {
+        if (!targetingState) return;
+        const { source, ability } = targetingState;
+        let target;
+
+        if (ability.target === 'ally' || ability.target === 'self') {
+            // Heal the most damaged ally (lowest HP percentage)
+            target = [...playerCharacters]
+                .filter(p => p.stats.hp > 0)
+                .sort((a, b) => (a.stats.hp / a.stats.maxHp) - (b.stats.hp / b.stats.maxHp))[0];
+        } else { // 'enemy'
+             // Default to the standard enemy targeting logic for now
+            const livingEnemies = enemyCharacters.filter(e => e.stats.hp > 0);
+            if (livingEnemies.length > 0) {
+                 target = livingEnemies.sort((a, b) => {
+                    if (a.row !== b.row) return a.row - b.row;
+                    return a.col - b.col;
+                })[0];
+            }
+        }
+
+        if (target) {
+            logMessage(`${source.name} will use ${ability.name} on ${target.name}.`, 'lightblue');
+            queueAbility(source, target, ability);
+        } else {
+            logMessage(`No valid targets for ${ability.name}.`, 'gray');
+        }
+
+        exitTargetingMode();
+    }
+
+    function queueAbility(source, target, ability) {
+        // This is a placeholder for now. The logic will be built out in the next step.
+        abilityQueue.push({ source, target, ability });
+        console.log('Ability Queued:', { source, target, ability });
     }
 
     function placeCharacter(character, side, cellIndex) {
@@ -459,16 +630,128 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1600);
     }
 
+    function useAbility(source, target, ability) {
+        logMessage(`${source.name} uses ${ability.name} on ${target.name}!`, 'lightgreen');
+
+        playAbilityAnimation(source, target, () => {
+             // This code runs after the animation has panned to the target
+            switch (ability.type) {
+                case 'healing':
+                    const healAmount = ability.potency;
+                    target.stats.hp = Math.min(target.stats.maxHp, target.stats.hp + healAmount);
+                    logMessage(`${target.name} is healed for ${healAmount} HP.`, 'green');
+                    showFloatingText(target, `+${healAmount}`, 'heal');
+                    updateCharacterUI(target);
+                    break;
+                default:
+                    logMessage(`Unknown ability type: ${ability.type}`, 'gray');
+                    break;
+            }
+        });
+
+        // Start cooldown immediately, don't wait for animation
+        source.cooldowns[ability.name] = ability.cooldown;
+    }
+
+    function playAbilityAnimation(source, target, callback) {
+        const sourceCell = document.getElementById(source.cellId);
+        const targetCell = document.getElementById(target.cellId);
+        const container = document.getElementById('game-container');
+
+        if (!sourceCell || !targetCell) {
+            if (callback) callback();
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        const sourceRect = sourceCell.getBoundingClientRect();
+        const targetRect = targetCell.getBoundingClientRect();
+
+        const sourceX = sourceRect.left - containerRect.left + sourceRect.width / 2;
+        const sourceY = sourceRect.top - containerRect.top + sourceRect.height / 2;
+        const targetX = targetRect.left - containerRect.left + targetRect.width / 2;
+        const targetY = targetRect.top - containerRect.top + targetRect.height / 2;
+
+        // --- Animation Sequence ---
+        const originalGameRunning = gameRunning;
+        gameRunning = false; // Pause the game loop during animation
+
+        // 1. Zoom on Source
+        container.classList.add('ability-zoom-container');
+        container.style.transformOrigin = `${sourceX}px ${sourceY}px`;
+        container.style.transform = 'scale(1.8)';
+
+        // 2. Magic Effect
+        setTimeout(() => {
+            const magicEffect = document.createElement('div');
+            magicEffect.classList.add('magic-effect');
+            magicEffect.style.left = `${sourceRect.left + sourceRect.width / 2 - 25}px`;
+            magicEffect.style.top = `${sourceRect.top + sourceRect.height / 2 - 25}px`;
+            document.body.appendChild(magicEffect);
+            setTimeout(() => magicEffect.remove(), 500);
+        }, 200);
+
+
+        // 3. Pan to Target and apply effect
+        setTimeout(() => {
+            container.style.transformOrigin = `${targetX}px ${targetY}px`;
+            if (callback) callback();
+        }, 600);
+
+
+        // 4. Zoom Out
+        setTimeout(() => {
+            container.style.transform = 'scale(1)';
+        }, 1100);
+
+        // 5. Cleanup and Resume
+        setTimeout(() => {
+            container.classList.remove('ability-zoom-container');
+            container.style.transformOrigin = '';
+            container.style.transform = '';
+            if (originalGameRunning) {
+                gameRunning = true;
+                requestAnimationFrame(gameLoop);
+            }
+        }, 1500);
+    }
+
     function gameLoop() {
         if (!gameRunning) return;
 
         const allCharacters = [...playerCharacters, ...enemyCharacters];
         allCharacters.forEach(char => {
             if (char.stats.hp > 0) {
+                // Decrement cooldowns
+                for (const abilityName in char.cooldowns) {
+                    if (char.cooldowns[abilityName] > 0) {
+                        char.cooldowns[abilityName]--;
+                        // Add visual flash when cooldown finishes
+                        if (char.cooldowns[abilityName] === 0) {
+                            triggerAnimation(char, 'ability-ready-flash');
+                        }
+                    }
+                }
+
+                // Gain stamina
                 char.stats.stamina += char.stats.staminaGain;
                 if (char.stats.stamina >= char.stats.maxStamina) {
                     char.stats.stamina = char.stats.maxStamina;
-                    takeTurn(char);
+
+                    // Check for a queued ability for this character
+                    const queuedAbilityIndex = abilityQueue.findIndex(item => item.source === char);
+                    if (queuedAbilityIndex !== -1) {
+                        const { source, target, ability } = abilityQueue.splice(queuedAbilityIndex, 1)[0];
+
+                        // Ensure target is still valid
+                        if (target.stats.hp > 0) {
+                            useAbility(source, target, ability);
+                        } else {
+                            logMessage(`${ability.name} could not be used because the target was defeated.`, 'gray');
+                        }
+                    } else {
+                        takeTurn(char);
+                    }
                     char.stats.stamina = 0;
                 }
             }
@@ -487,14 +770,15 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
-        const heroTypes = ['Squire', 'Archer'];
+        const heroTypes = ['Squire', 'Archer', 'Priest'];
         const heroPositions = [7, 12, 17]; // Middle column positions
 
         for (let i = 0; i < 3; i++) {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
             const heroData = characterDataStore.characters[randomHeroType];
             if (heroData) {
-                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color);
+                const abilities = (heroData.abilities || []).map(name => characterDataStore.abilities[name]);
+                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color, abilities);
                 if (heroData.default_equipment) {
                     Object.keys(heroData.default_equipment).forEach(slot => {
                         const equipmentName = heroData.default_equipment[slot];
