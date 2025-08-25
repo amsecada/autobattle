@@ -1,0 +1,10 @@
+{
+    "name": "Magic Wand",
+    "type": "weapon",
+    "art": "  *\n  |\n  |",
+    "color": "lightblue",
+    "stats": {
+        "damage": [4, 7]
+    },
+    "rarity": "magic"
+}

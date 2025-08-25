@@ -1,0 +1,14 @@
+{
+    "name": "Gobgob Brute",
+    "art": " O\n/|\\\n/ \\",
+    "color": "darkgreen",
+    "stats": {
+        "hp": 120,
+        "strength": 12,
+        "dexterity": 6,
+        "blockChance": 0.1
+    },
+    "default_equipment": {
+        "weapon": "spiked_club"
+    }
+}

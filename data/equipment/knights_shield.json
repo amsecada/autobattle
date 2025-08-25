@@ -1,0 +1,10 @@
+{
+    "name": "Knight's Shield",
+    "type": "offhand",
+    "art": " ()\n/--\\\n\\--/",
+    "color": "deepskyblue",
+    "stats": {
+        "blockChance": 0.1
+    },
+    "rarity": "rare"
+}

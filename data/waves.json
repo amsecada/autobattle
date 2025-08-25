@@ -1,0 +1,16 @@
+{
+    "waves": [
+        {
+            "name": "Wave 1: The Goblin Scouts",
+            "enemies": ["gobgob", "gobgob", "gobgob_wizard"]
+        },
+        {
+            "name": "Wave 2: Reinforced Goblin Pack",
+            "enemies": ["gobgob_brute", "gobgob_wizard", "gobgob_brute"]
+        },
+        {
+            "name": "Wave 3: The Goblin King",
+            "enemies": ["gobgob_king", "gobgob_wizard", "gobgob_wizard"]
+        }
+    ]
+}

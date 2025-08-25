@@ -20,6 +20,9 @@ This project is a simple turn-based RPG game implemented in HTML, CSS, and vanil
 - `data/`: This directory contains all the game data, separated into subdirectories.
     - `heroes/`: Contains JSON files for player-controllable characters.
     - `enemies/`: Contains JSON files for enemy characters.
+    - `equipment/`: Contains JSON files for equippable items.
+    - `abilities/`: Contains JSON files for character abilities.
+    - `waves.json`: Defines the sequence of enemy encounters.
     - `Backgrounds/`: Contains .txt files with ASCII art for battle backgrounds.
 
 ## 3. Game Mechanics
@@ -98,3 +101,12 @@ The game now features ASCII art backgrounds to enhance the atmosphere of the bat
 
 -   **Dynamic Loading**: The background is loaded from a `.txt` file specified in `app.js`.
 -   **Aesthetic**: The art is styled to be subtle and not distract from the gameplay, providing an immersive, a thematic backdrop for the combat.
+
+### 5.5. Wave and Treasure System
+
+The game is no longer a single encounter. Players now progress through a series of waves, with each wave presenting a new set of enemies.
+
+-   **Wave Progression**: After successfully defeating all enemies in a wave, players are presented with a choice of rewards.
+-   **Treasure Selection**: A new treasure screen appears, displaying three equipment cards. Players can choose one of the three items to add to their inventory.
+-   **Increasing Difficulty**: The waves are defined in `data/waves.json` and are designed to increase in difficulty, introducing stronger enemies in later waves.
+-   **Gear Rarity**: Equipment now has a rarity level, indicated by a colored border on the treasure card. The rarities are: common (white), uncommon/magic (green), rare (blue), epic (purple), legendary (orange), ornate (deep red), and unique (gold).
