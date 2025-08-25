@@ -1,0 +1,16 @@
+{
+    "waves": [
+        {
+            "name": "Wave 1: A Lone Gobgob",
+            "enemies": ["Gobgob"]
+        },
+        {
+            "name": "Wave 2: A Pair of Gobgobs",
+            "enemies": ["Gobgob", "Gobgob"]
+        },
+        {
+            "name": "Wave 3: A Trio of Gobgobs",
+            "enemies": ["Gobgob", "Gobgob", "Gobgob"]
+        }
+    ]
+}

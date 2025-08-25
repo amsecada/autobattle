@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const abilityPanelClose = document.getElementById('ability-panel-close');
     const targetingModal = document.getElementById('targeting-modal');
     const abilityCastNameDisplay = document.getElementById('ability-cast-name-display');
+    const treasureSelectionModal = document.getElementById('treasure-selection-modal');
+    const treasureCardsContainer = document.getElementById('treasure-cards');
 
 
     // Game Settings
@@ -40,8 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Game State
     let gameSpeed = 1.0; // 1.0 is normal speed, 0.25 is bullet time
     let gameRunning = false;
+    let currentWave = 0;
     const playerCharacters = [];
     const enemyCharacters = [];
+    const playerInventory = [];
     let characterDataStore = {}; // To hold loaded JSON data
     const cellCharacterMap = new Map();
     let targetingState = null; // { source, ability, timeoutId }
@@ -78,27 +82,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadAllCharacterData() {
         const heroFiles = ['squire', 'archer', 'priest'];
-        const enemyFiles = ['gobgob', 'gobgob_wizard'];
-        const equipmentFiles = ['rusty_longsword', 'rusty_crossbow', 'rusty_club'];
+        const enemyFiles = ['gobgob', 'gobgob_wizard', 'gobgob_brute', 'gobgob_king'];
+        const equipmentFiles = ['rusty_longsword', 'rusty_crossbow', 'rusty_club', 'spiked_club', 'kings_blade', 'magic_wand', 'knights_shield'];
         const abilityFiles = ['heal', 'defend', 'snipe'];
+        const waveFile = 'data/waves.json';
 
         const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
         const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
         const equipmentPromises = equipmentFiles.map(name => loadJson(`data/equipment/${name}.json`));
         const abilityPromises = abilityFiles.map(name => loadJson(`data/abilities/${name}.json`));
+        const wavePromise = loadJson(waveFile);
 
 
-        const [heroData, enemyData, equipmentData, abilityData] = await Promise.all([
+        const [heroData, enemyData, equipmentData, abilityData, waveData] = await Promise.all([
             Promise.all(heroPromises),
             Promise.all(enemyPromises),
             Promise.all(equipmentPromises),
-            Promise.all(abilityPromises)
+            Promise.all(abilityPromises),
+            wavePromise
         ]);
 
         const allData = {
             characters: {},
             equipment: {},
-            abilities: {}
+            abilities: {},
+            waves: waveData.waves
         };
         heroData.forEach(h => allData.characters[h.name] = h);
         enemyData.forEach(e => allData.characters[e.name] = e);
@@ -534,14 +542,91 @@ document.addEventListener('DOMContentLoaded', () => {
         gameOverModal.style.display = 'flex';
     }
 
+    function generateTreasure() {
+        const lootTable = [];
+        const defeatedEnemies = enemyCharacters; // We can use the global enemyCharacters from the completed wave
+
+        // 1. Populate loot table from defeated enemies' equipment
+        defeatedEnemies.forEach(enemy => {
+            if (enemy.equipment.weapon) {
+                lootTable.push(enemy.equipment.weapon);
+            }
+            if (enemy.equipment.offhand) {
+                lootTable.push(enemy.equipment.offhand);
+            }
+            // Add other slots if they exist
+        });
+
+        // 2. Add a chance for rarer, random items
+        const rarityUpgradeChance = 0.25; // 25% chance to get a random rare item instead of a common one
+        if (Math.random() < rarityUpgradeChance) {
+            const allEquipment = Object.values(characterDataStore.equipment);
+            const rareItems = allEquipment.filter(e => e.rarity === 'rare' || e.rarity === 'epic' || e.rarity === 'legendary');
+            if (rareItems.length > 0) {
+                lootTable.push(rareItems[Math.floor(Math.random() * rareItems.length)]);
+            }
+        }
+
+        // 3. Fill up the rest of the loot options with common/uncommon items if table is small
+        while (lootTable.length < 3) {
+            const allEquipment = Object.values(characterDataStore.equipment);
+            const commonItems = allEquipment.filter(e => e.rarity === 'common' || e.rarity === 'uncommon');
+            if (commonItems.length > 0) {
+                lootTable.push(commonItems[Math.floor(Math.random() * commonItems.length)]);
+            } else {
+                break; // No common items to add
+            }
+        }
+
+
+        // 4. Select 3 unique items to present
+        const selectedTreasures = new Set();
+        while (selectedTreasures.size < 3 && lootTable.length > 0) {
+            const randomIndex = Math.floor(Math.random() * lootTable.length);
+            selectedTreasures.add(lootTable[randomIndex]);
+            lootTable.splice(randomIndex, 1);
+        }
+
+        return Array.from(selectedTreasures);
+    }
+
+    function showTreasureSelection(treasures) {
+        treasureCardsContainer.innerHTML = '';
+        treasures.forEach(item => {
+            const card = document.createElement('div');
+            card.classList.add('treasure-card', `rarity-${item.rarity}`);
+            card.innerHTML = `
+                <div class="item-art">${item.art}</div>
+                <div class="item-name">${item.name}</div>
+                <div class="item-stats">Damage: ${item.stats.damage ? item.stats.damage.join('-') : 'N/A'}</div>
+            `;
+            card.addEventListener('click', () => {
+                playerInventory.push(item);
+                logMessage(`You picked up ${item.name}!`, 'gold');
+                console.log("Player Inventory:", playerInventory); // Log inventory
+                treasureSelectionModal.style.display = 'none';
+                currentWave++;
+                setupGame();
+            });
+            treasureCardsContainer.appendChild(card);
+        });
+        treasureSelectionModal.style.display = 'flex';
+    }
+
     function checkGameOver() {
         const allEnemiesDefeated = enemyCharacters.every(char => char.stats.hp <= 0);
         const allPlayersDefeated = playerCharacters.every(char => char.stats.hp <= 0);
 
         if (allEnemiesDefeated) {
             gameRunning = false;
-            logMessage('All enemies defeated. You win!', 'gold');
-            showGameOverModal('Victory!');
+            logMessage('Wave Complete!', 'gold');
+            if (currentWave < characterDataStore.waves.length - 1) {
+                const treasures = generateTreasure();
+                showTreasureSelection(treasures);
+            } else {
+                logMessage('All waves defeated. You are victorious!', 'gold');
+                showGameOverModal('You Win!');
+            }
         } else if (allPlayersDefeated) {
             gameRunning = false;
             logMessage('All your characters have been defeated. You lose.', 'tomato');
@@ -1135,54 +1220,63 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(gameLoop);
     }
 
-    function setupGame() {
-        console.log("--- Starting Game Setup ---");
+    function setupGame(isNewGame = false) {
+        if (isNewGame) {
+            currentWave = 0;
+            playerInventory.length = 0;
+            playerCharacters.length = 0;
+        }
+
+        console.log(`--- Starting Wave ${currentWave + 1} ---`);
         loadBackground('Backgrounds/heavy_forest.txt');
         combatLog.innerHTML = '';
-        playerCharacters.length = 0;
         enemyCharacters.length = 0;
         cellCharacterMap.clear();
 
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
-        console.log("Character Data Store:", characterDataStore);
+        // Restore player characters from the previous wave
+        playerCharacters.forEach((pc, index) => {
+            placeCharacter(pc, 'player', [7, 12, 17][index]);
+        });
 
-        const heroTypes = ['Squire', 'Archer', 'Priest'];
-        const heroPositions = [7, 12, 17]; // Middle column positions
+        // Initial setup for a new game
+        if (isNewGame) {
+            const heroTypes = ['Squire', 'Archer', 'Priest'];
+            const heroPositions = [7, 12, 17];
 
-        for (let i = 0; i < 3; i++) {
-            const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
-            console.log(`Creating hero of type: ${randomHeroType}`);
-            const heroData = characterDataStore.characters[randomHeroType];
-            if (heroData) {
-                console.log("Hero data found:", heroData);
-                const abilities = (heroData.abilities || [])
-                    .map(name => characterDataStore.abilities[name.toLowerCase()])
-                    .filter(Boolean); // Filter out any undefined abilities
-                console.log("Mapped abilities:", abilities);
-                const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color, abilities);
-                if (heroData.default_equipment) {
-                    Object.keys(heroData.default_equipment).forEach(slot => {
-                        const equipmentName = heroData.default_equipment[slot];
-                        hero.equipment[slot] = characterDataStore.equipment[equipmentName];
-                    });
+            for (let i = 0; i < 3; i++) {
+                const heroType = heroTypes[i];
+                const heroData = characterDataStore.characters[heroType];
+                if (heroData) {
+                    const abilities = (heroData.abilities || [])
+                        .map(name => characterDataStore.abilities[name.toLowerCase()])
+                        .filter(Boolean);
+                    const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color, abilities);
+                    if (heroData.default_equipment) {
+                        Object.keys(heroData.default_equipment).forEach(slot => {
+                            const equipmentName = heroData.default_equipment[slot];
+                            hero.equipment[slot] = characterDataStore.equipment[equipmentName];
+                        });
+                    }
+                    playerCharacters.push(hero);
+                    placeCharacter(hero, 'player', heroPositions[i]);
+                    logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
                 }
-                playerCharacters.push(hero);
-                placeCharacter(hero, 'player', heroPositions[i]);
-                logMessage(`A ${hero.name} joins your ranks!`, "lightgreen");
             }
         }
 
-        const enemyTypes = ['Gobgob', 'Gobgob Wizard'];
-        const enemyPositions = [7, 12, 17]; // Middle column positions
+        // Spawn enemies for the current wave
+        const wave = characterDataStore.waves[currentWave];
+        logMessage(wave.name, 'yellow');
+        const enemyPositions = [7, 12, 17];
 
-        for (let i = 0; i < 3; i++) {
-            const randomEnemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-            const enemyData = characterDataStore.characters[randomEnemyType];
+        wave.enemies.forEach((enemyName, i) => {
+            const enemyData = characterDataStore.characters[enemyName];
             if (enemyData) {
                 const enemy = new Character(enemyData.name, enemyData.art, enemyData.stats, enemyData.color);
-                if (enemyData.default_equipment) {
+                 if (enemyData.default_equipment) {
                     Object.keys(enemyData.default_equipment).forEach(slot => {
                         const equipmentName = enemyData.default_equipment[slot];
                         enemy.equipment[slot] = characterDataStore.equipment[equipmentName];
@@ -1192,7 +1286,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 placeCharacter(enemy, 'enemy', enemyPositions[i]);
                 logMessage(`A wild ${enemy.name} appears!`, "lightcoral");
             }
-        }
+        });
+
 
         gameRunning = true;
         requestAnimationFrame(gameLoop);
@@ -1206,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             characterDataStore = await loadAllCharacterData();
-            setupGame();
+            setupGame(true); // Start a new game
         } catch (error) {
             console.error("Failed to load character data:", error);
             logMessage("Error: Could not load game data. Please refresh.", "red");
@@ -1243,10 +1338,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     playAgainBtn.addEventListener('click', () => {
-        // This also needs to be async or handle data loading appropriately
-        // For now, let's just restart with the already loaded data.
         gameOverModal.style.display = 'none';
-        setupGame();
+        setupGame(true); // Start a new game from wave 1
     });
 
     abilityPanelAbilities.addEventListener('click', (event) => {

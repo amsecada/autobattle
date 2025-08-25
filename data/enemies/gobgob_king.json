@@ -1,0 +1,14 @@
+{
+    "name": "Gobgob King",
+    "art": " W\n/|\\\n/ \\",
+    "color": "darkred",
+    "stats": {
+        "hp": 200,
+        "strength": 15,
+        "dexterity": 10,
+        "blockChance": 0.15
+    },
+    "default_equipment": {
+        "weapon": "kings_blade"
+    }
+}

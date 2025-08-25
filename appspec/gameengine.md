@@ -75,3 +75,29 @@ The game engine now supports thematic ASCII art backgrounds.
 
 -   **File-Based**: Backgrounds are loaded from `.txt` files stored in the `/Backgrounds/` directory.
 -   **Styling**: The backgrounds are rendered with a low opacity and a specific color to ensure they provide atmosphere without interfering with the readability of the game board.
+
+## 9. Wave and Treasure System
+
+The game flow is structured around a series of enemy waves and a treasure selection phase after each successful wave.
+
+### 9.1. Wave Structure
+
+-   **`waves.json`**: This file, located in the `data/` directory, defines the progression of the game. It contains an array of "wave" objects.
+-   **Wave Object**: Each wave object has a `name` (e.g., "Wave 1: The Goblin Scouts") and an `enemies` array, which lists the `name` of each enemy character to be spawned for that wave.
+-   **Progression**: The game advances through the `waves` array by incrementing the `currentWave` index in `app.js`.
+
+### 9.2. Treasure Generation
+
+-   **Trigger**: Treasure generation is triggered in `checkGameOver()` when all enemies in the current wave are defeated.
+-   **Loot Table Creation**: The `generateTreasure()` function creates a dynamic loot table for each wave.
+    -   **Base Loot**: The table is first populated with the `default_equipment` from all defeated enemies in the wave.
+    -   **Rarity Upgrade**: There is a chance (defined by `rarityUpgradeChance`) to add a random high-rarity item to the loot table.
+    -   **Padding**: If the loot table has fewer than three items, it is padded with random common or uncommon items.
+-   **Selection**: Three unique items are randomly selected from the final loot table to be presented to the player.
+
+### 9.3. Treasure Selection UI
+
+-   **Modal**: A dedicated modal (`treasure-selection-modal`) is displayed, pausing the game.
+-   **Cards**: Inside the modal, the three selected treasure items are displayed as clickable cards.
+-   **Rarity Visualization**: Each card has a border color and a `box-shadow` that corresponds to the item's `rarity` property (defined in its JSON file). The CSS classes are named `rarity-common`, `rarity-rare`, etc.
+-   **Player Choice**: When the player clicks a card, the corresponding item is added to the `playerInventory` array, and the game proceeds to the next wave by calling `setupGame()`.

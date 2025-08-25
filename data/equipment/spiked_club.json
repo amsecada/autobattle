@@ -1,0 +1,10 @@
+{
+    "name": "Spiked Club",
+    "type": "weapon",
+    "art": "  |\\\n  |\\\\ \n  |",
+    "color": "#A0522D",
+    "stats": {
+        "damage": [5, 8]
+    },
+    "rarity": "uncommon"
+}
