@@ -52,8 +52,8 @@ button:hover {
     font-family: 'Courier New', Courier, monospace;
     white-space: pre;
     overflow: hidden;
-    color: #4F7942; /* A dark green color */
-    opacity: 0.3;
+    color: #6B8E23; /* A brighter olive green */
+    opacity: 0.7;
 }
 
 #battle-screen {
