@@ -1,0 +1,31 @@
+{
+    "name": "Defend",
+    "cooldown": 1200,
+    "type": "defensive",
+    "target": "ally",
+    "description": "For 3 seconds, an ally takes 75% less damage, and the Squire receives the absorbed amount.",
+    "effects": [
+        {
+            "name": "Defended",
+            "description": "Damage taken reduced by 75%.",
+            "duration": 180,
+            "potency": 0.75,
+            "applyTo": "target"
+        },
+        {
+            "name": "Guarding",
+            "description": "Taking damage for an ally.",
+            "duration": 180,
+            "potency": 0.25,
+            "applyTo": "source"
+        }
+    ],
+    "particles": {
+        "count": 25,
+        "velocity": 50,
+        "styles": [
+            { "char": "⛨", "color": "lightblue" },
+            { "char": "🛡", "color": "white" }
+        ]
+    }
+}

@@ -1,16 +1,25 @@
 {
     "name": "Heal",
-    "cooldown": 200,
+    "cooldown": 1800,
     "type": "healing",
     "target": "ally",
-    "potency": 25,
-    "description": "Heals a friendly target for 25 HP.",
+    "potency": 50,
+    "description": "Heals a friendly target for 50 HP and applies a heal-over-time effect.",
+    "effects": [
+        {
+            "name": "HealOverTime",
+            "description": "Regenerating health.",
+            "duration": 300,
+            "potency": 5,
+            "tickRate": 60,
+            "applyTo": "target"
+        }
+    ],
     "particles": {
-        "count": 20,
-        "velocity": 80,
+        "count": 30,
+        "velocity": 90,
         "styles": [
-            { "char": "*", "color": "lightgreen" },
-            { "char": ".", "color": "lightblue" },
+            { "char": "+", "color": "lightgreen" },
             { "char": "+", "color": "white" }
         ]
     }

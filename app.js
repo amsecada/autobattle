@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const abilityPanelAbilities = document.getElementById('ability-panel-abilities');
     const abilityPanelClose = document.getElementById('ability-panel-close');
     const targetingModal = document.getElementById('targeting-modal');
+    const abilityCastNameDisplay = document.getElementById('ability-cast-name-display');
 
 
     // Game Settings
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const heroFiles = ['squire', 'archer', 'priest'];
         const enemyFiles = ['gobgob', 'gobgob_wizard'];
         const equipmentFiles = ['rusty_longsword', 'rusty_crossbow', 'rusty_club'];
-        const abilityFiles = ['heal']; // Hardcode for now
+        const abilityFiles = ['heal', 'defend', 'snipe'];
 
         const heroPromises = heroFiles.map(name => loadJson(`data/heroes/${name}.json`));
         const enemyPromises = enemyFiles.map(name => loadJson(`data/enemies/${name}.json`));
@@ -87,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Character Class
     class Character {
         constructor(name, art, stats, color = '#f0f0f0', abilities = []) {
+            console.log(`Constructor called for: ${name}`, { art, stats, color, abilities });
             this.name = name;
             this.art = art;
             this.color = color;
@@ -113,6 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.abilities.forEach(ability => {
                 this.cooldowns[ability.name] = 0;
             });
+            this.effects = [];
+            this.gameTick = 0;
         }
     }
 
@@ -197,20 +201,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 abilityButton.appendChild(abilityName);
                 abilityButton.appendChild(abilityDesc);
 
-                const cooldown = character.cooldowns[ability.name];
-                if (cooldown > 0) {
-                    abilityButton.classList.add('on-cooldown');
-                    const cooldownTimer = document.createElement('span');
-                    cooldownTimer.classList.add('ability-cooldown-timer');
-                    const secondsLeft = Math.ceil(cooldown / 60); // Assuming ~60 ticks per second
-                    cooldownTimer.textContent = `On Cooldown (${secondsLeft}s)`;
-                    abilityButton.appendChild(cooldownTimer);
-                } else {
-                    abilityButton.addEventListener('click', () => {
-                        enterTargetingMode(character, ability);
-                        abilityPanel.style.display = 'none'; // Close panel after selection
-                    });
-                }
+                const cooldownWrapper = document.createElement('div');
+                cooldownWrapper.classList.add('cooldown-wrapper');
+
+                const cooldownOverlay = document.createElement('div');
+                cooldownOverlay.classList.add('cooldown-overlay');
+                cooldownWrapper.appendChild(cooldownOverlay);
+
+                const cooldownText = document.createElement('span');
+                cooldownText.classList.add('cooldown-text');
+                cooldownWrapper.appendChild(cooldownText);
+
+                abilityButton.appendChild(cooldownWrapper);
+                abilityButton.dataset.abilityName = ability.name; // Link button to ability
+
+                // Event listener will be handled by a single delegated listener
+                // on the parent container to improve performance and simplify logic.
                 abilityPanelAbilities.appendChild(abilityButton);
             });
         }
@@ -577,13 +583,42 @@ document.addEventListener('DOMContentLoaded', () => {
             logMessage(`A CRITICAL HIT!`, 'orange');
         }
 
-        // Apply Damage and show floating text
-        defender.stats.hp -= damage;
-        logMessage(`${defender.name} takes ${damage} damage.`, 'red');
-        if (isCrit) {
-            showFloatingText(defender, `-${damage}!!`, 'crit');
+        // --- Damage Application with Effects ---
+        const defendedEffect = defender.effects.find(e => e.name === 'Defended');
+        if (defendedEffect) {
+            const damageReduction = defendedEffect.potency;
+            const absorbedDamage = Math.round(damage * damageReduction);
+            const remainingDamage = damage - absorbedDamage;
+
+            // Apply remaining damage to original target
+            defender.stats.hp -= remainingDamage;
+            logMessage(`${defender.name} is defended and takes only ${remainingDamage} damage.`, 'red');
+            showFloatingText(defender, `-${remainingDamage}`, 'damage');
+
+            // Apply absorbed damage to the effect source (the Squire)
+            const guard = defendedEffect.source;
+            if (guard && guard.stats.hp > 0) {
+                guard.stats.hp -= absorbedDamage;
+                logMessage(`${guard.name} absorbs ${absorbedDamage} damage for ${defender.name}!`, 'darkred');
+                showFloatingText(guard, `-${absorbedDamage}`, 'damage');
+                if (guard.stats.hp <= 0) {
+                    guard.stats.hp = 0;
+                    logMessage(`${guard.name} has been defeated protecting an ally!`, 'gray');
+                    triggerDeathAnimation(guard);
+                    cellCharacterMap.delete(guard.cellId);
+                }
+                 updateCharacterUI(guard);
+            }
+
         } else {
-            showFloatingText(defender, `-${damage}`, 'damage');
+            // Apply standard damage
+            defender.stats.hp -= damage;
+            logMessage(`${defender.name} takes ${damage} damage.`, 'red');
+            if (isCrit) {
+                showFloatingText(defender, `-${damage}!!`, 'crit');
+            } else {
+                showFloatingText(defender, `-${damage}`, 'damage');
+            }
         }
 
         if (defender.stats.hp < 0) defender.stats.hp = 0;
@@ -686,6 +721,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1600);
     }
 
+    function applyEffect(source, target, effectData) {
+        // Add source and a unique ID to the effect instance
+        const effect = {
+            ...effectData,
+            source: source,
+            id: Date.now() + Math.random(),
+            remaining: effectData.duration,
+            lastTick: 0
+        };
+
+        // Check if an effect with the same name from the same source already exists
+        const existingEffectIndex = target.effects.findIndex(e => e.name === effect.name && e.source === source);
+        if (existingEffectIndex !== -1) {
+            // Refresh duration of existing effect
+            target.effects[existingEffectIndex].remaining = effect.duration;
+            logMessage(`${target.name}'s ${effect.name} duration was refreshed.`, 'yellow');
+        } else {
+            target.effects.push(effect);
+            logMessage(`${target.name} is now affected by ${effect.name}.`, 'lightblue');
+        }
+    }
+
     function addParticleEffect(target, particleData) {
         const cell = document.getElementById(target.cellId);
         if (!cell) return;
@@ -716,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function useAbility(source, target, ability) {
         logMessage(`${source.name} uses ${ability.name} on ${target.name}!`, 'lightgreen');
 
-        playAbilityAnimation(source, target, () => {
+        playAbilityAnimation(source, target, ability, () => {
              // This code runs after the animation has panned to the target
 
             // Trigger particles at the same time as the healing effect
@@ -732,9 +789,68 @@ document.addEventListener('DOMContentLoaded', () => {
                     showFloatingText(target, `+${healAmount}`, 'heal');
                     updateCharacterUI(target);
                     break;
+                case 'defensive':
+                    // No direct effect, just applying buffs/debuffs
+                    logMessage(`${target.name} is being defended by ${source.name}!`);
+                    break;
+                case 'damage':
+                    // Calculate base damage (similar to takeTurn)
+                    let baseDamage;
+                    if (source.equipment.weapon && source.equipment.weapon.stats.damage) {
+                        const [min, max] = source.equipment.weapon.stats.damage;
+                        baseDamage = Math.floor(Math.random() * (max - min + 1)) + min;
+                    } else {
+                        baseDamage = source.stats.strength;
+                    }
+
+                    // Apply ability potency
+                    let finalDamage = baseDamage * ability.potency;
+
+                    // Snipe can also crit
+                    const isCrit = Math.random() < (source.stats.strength / 100);
+                    if (isCrit) {
+                        finalDamage = Math.round(finalDamage * 1.5);
+                        logMessage(`A CRITICAL HIT!`, 'orange');
+                    }
+
+                    finalDamage = Math.round(finalDamage);
+
+                    // Apply damage directly to target
+                    target.stats.hp -= finalDamage;
+                    logMessage(`${target.name} is hit by ${ability.name} for ${finalDamage} damage!`, 'red');
+                     if (isCrit) {
+                        showFloatingText(target, `-${finalDamage}!!`, 'crit');
+                    } else {
+                        showFloatingText(target, `-${finalDamage}`, 'damage');
+                    }
+
+                    if (target.stats.hp < 0) target.stats.hp = 0;
+                    updateCharacterUI(target);
+
+                    // Check for defeat
+                    if (target.stats.hp <= 0) {
+                        logMessage(`${target.name} has been defeated!`, 'gray');
+                        triggerDeathAnimation(target);
+                        cellCharacterMap.delete(target.cellId);
+                        checkGameOver();
+                    }
+                    break;
                 default:
                     logMessage(`Unknown ability type: ${ability.type}`, 'gray');
                     break;
+            }
+
+            // Apply any associated effects
+            if (ability.effects) {
+                ability.effects.forEach(effectData => {
+                    let effectTarget;
+                    if (effectData.applyTo === 'source') {
+                        effectTarget = source;
+                    } else { // 'target' is the default
+                        effectTarget = target;
+                    }
+                    applyEffect(source, effectTarget, effectData);
+                });
             }
         });
 
@@ -742,7 +858,18 @@ document.addEventListener('DOMContentLoaded', () => {
         source.cooldowns[ability.name] = ability.cooldown;
     }
 
-    function playAbilityAnimation(source, target, callback) {
+    function playAbilityAnimation(source, target, ability, callback) {
+        // --- Flash Ability Name ---
+        abilityCastNameDisplay.textContent = ability.name;
+        abilityCastNameDisplay.style.display = 'block';
+        // Reset animation by removing and re-adding the class
+        abilityCastNameDisplay.style.animation = 'none';
+        abilityCastNameDisplay.offsetHeight; /* trigger reflow */
+        abilityCastNameDisplay.style.animation = null;
+        setTimeout(() => {
+            abilityCastNameDisplay.style.display = 'none';
+        }, 1500); // Must match animation duration in CSS
+
         const sourceCell = document.getElementById(source.cellId);
         const targetCell = document.getElementById(target.cellId);
         const container = document.getElementById('game-container');
@@ -805,12 +932,112 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     }
 
+    function addEffectParticles(character, effect) {
+        // Only add a particle on certain ticks to avoid overwhelming the screen
+        if (character.gameTick % 15 !== 0) return;
+
+        const cell = document.getElementById(character.cellId);
+        if (!cell) return;
+
+        let style;
+        if (effect.name === 'HealOverTime') {
+            style = { char: '+', color: 'lightgreen' };
+        } else if (effect.name === 'Defended') {
+            style = { char: '🛡', color: 'lightblue' };
+        } else {
+            return; // No particles for this effect
+        }
+
+        const particle = document.createElement('div');
+        particle.classList.add('ability-particle'); // Can reuse this class
+        particle.textContent = style.char;
+        particle.style.color = style.color;
+        // Make effect particles smaller and less intrusive
+        particle.style.fontSize = '1rem';
+        particle.style.zIndex = '50';
+
+
+        cell.appendChild(particle);
+
+        // Animate it rising up and fading out
+        const x = (Math.random() - 0.5) * 40; // Less horizontal spread
+        const y = -60 - (Math.random() * 20);   // Move upwards
+        particle.style.setProperty('--ability-tx', `${x}px`);
+        particle.style.setProperty('--ability-ty', `${y}px`);
+
+        setTimeout(() => {
+            particle.remove();
+        }, 1000); // Match animation duration in CSS
+    }
+
+    function updateAbilityPanelTimers() {
+        if (abilityPanel.style.display !== 'block') return;
+
+        const charName = abilityPanelCharName.textContent.replace("'s Abilities", "");
+        const character = playerCharacters.find(p => p.name === charName);
+        if (!character) return;
+
+        const buttons = abilityPanelAbilities.querySelectorAll('.ability-button');
+        buttons.forEach(button => {
+            const abilityName = button.dataset.abilityName;
+            const ability = character.abilities.find(a => a.name === abilityName);
+            if (!ability) return;
+
+            const overlay = button.querySelector('.cooldown-overlay');
+            const text = button.querySelector('.cooldown-text');
+            const currentCD = character.cooldowns[abilityName];
+            const totalCD = ability.cooldown;
+
+            if (currentCD > 0) {
+                button.classList.add('on-cooldown');
+                const percentage = currentCD / totalCD;
+                overlay.style.transform = `scaleY(${percentage})`;
+                text.style.display = 'block';
+                text.textContent = (currentCD / 60).toFixed(1);
+            } else {
+                button.classList.remove('on-cooldown');
+                overlay.style.transform = 'scaleY(0)';
+                text.style.display = 'none';
+            }
+        });
+    }
+
     function gameLoop() {
         if (!gameRunning) return;
 
         const allCharacters = [...playerCharacters, ...enemyCharacters];
         allCharacters.forEach(char => {
             if (char.stats.hp > 0) {
+                char.gameTick++;
+
+                // Process effects
+                char.effects = char.effects.filter(effect => {
+                    effect.remaining--;
+                    if (effect.remaining <= 0) {
+                        logMessage(`${char.name} is no longer affected by ${effect.name}.`, 'gray');
+                        return false; // Remove effect
+                    }
+
+                    // Handle tick-rate effects (e.g., HoT, DoT)
+                    if (effect.tickRate && (char.gameTick - effect.lastTick >= effect.tickRate)) {
+                        effect.lastTick = char.gameTick;
+                        switch (effect.name) {
+                            case 'HealOverTime':
+                                char.stats.hp = Math.min(char.stats.maxHp, char.stats.hp + effect.potency);
+                                showFloatingText(char, `+${effect.potency}`, 'heal');
+                                break;
+                        }
+                    }
+
+                    // Handle continuous particle effects
+                    if (effect.name === 'HealOverTime' || effect.name === 'Defended') {
+                        addEffectParticles(char, effect);
+                    }
+
+                    return true; // Keep effect
+                });
+
+
                 // Decrement cooldowns
                 for (const abilityName in char.cooldowns) {
                     if (char.cooldowns[abilityName] > 0) {
@@ -847,10 +1074,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateCharacterUI(char);
         });
 
+        updateAbilityPanelTimers();
         requestAnimationFrame(gameLoop);
     }
 
     function setupGame() {
+        console.log("--- Starting Game Setup ---");
         combatLog.innerHTML = '';
         playerCharacters.length = 0;
         enemyCharacters.length = 0;
@@ -859,14 +1088,21 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
+        console.log("Character Data Store:", characterDataStore);
+
         const heroTypes = ['Squire', 'Archer', 'Priest'];
         const heroPositions = [7, 12, 17]; // Middle column positions
 
         for (let i = 0; i < 3; i++) {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
+            console.log(`Creating hero of type: ${randomHeroType}`);
             const heroData = characterDataStore.characters[randomHeroType];
             if (heroData) {
-                const abilities = (heroData.abilities || []).map(name => characterDataStore.abilities[name]);
+                console.log("Hero data found:", heroData);
+                const abilities = (heroData.abilities || [])
+                    .map(name => characterDataStore.abilities[name.toLowerCase()])
+                    .filter(Boolean); // Filter out any undefined abilities
+                console.log("Mapped abilities:", abilities);
                 const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color, abilities);
                 if (heroData.default_equipment) {
                     Object.keys(heroData.default_equipment).forEach(slot => {
@@ -940,5 +1176,41 @@ document.addEventListener('DOMContentLoaded', () => {
         // For now, let's just restart with the already loaded data.
         gameOverModal.style.display = 'none';
         setupGame();
+    });
+
+    abilityPanelAbilities.addEventListener('click', (event) => {
+        const button = event.target.closest('.ability-button');
+        if (!button || button.classList.contains('on-cooldown')) {
+            return; // Clicked on gap or a button on cooldown
+        }
+
+        const charName = abilityPanelCharName.textContent.replace("'s Abilities", "");
+        const character = playerCharacters.find(p => p.name === charName);
+        if (!character) return;
+
+        const abilityName = button.dataset.abilityName;
+        const ability = character.abilities.find(a => a.name === abilityName);
+        if (!ability) return;
+
+        enterTargetingMode(character, ability);
+        abilityPanel.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        // Close ability panel if click is outside of it
+        if (abilityPanel.style.display === 'block' && !abilityPanel.contains(event.target)) {
+            // Check that the click was not on a character, which opens the panel
+            const clickedCell = event.target.closest('.grid-cell');
+            if (clickedCell && cellCharacterMap.has(clickedCell.id)) {
+                // If we clicked a character, let the character click handler manage the panel
+                return;
+            }
+            abilityPanel.style.display = 'none';
+        }
+
+        // Close settings modal if click is outside of it
+        if (settingsModal.style.display === 'flex' && !settingsModal.querySelector('.modal-content').contains(event.target)) {
+            settingsModal.style.display = 'none';
+        }
     });
 });
