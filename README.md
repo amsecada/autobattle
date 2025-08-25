@@ -20,6 +20,7 @@ This project is a simple turn-based RPG game implemented in HTML, CSS, and vanil
 - `data/`: This directory contains all the game data, separated into subdirectories.
     - `heroes/`: Contains JSON files for player-controllable characters.
     - `enemies/`: Contains JSON files for enemy characters.
+    - `Backgrounds/`: Contains .txt files with ASCII art for battle backgrounds.
 
 ## 3. Game Mechanics
 
@@ -83,3 +84,17 @@ A new settings modal has been added to the game. It can be accessed by clicking 
 
 -   **Blood Mode**: On/Off. Adds additional blood stylings to the death sequence.
 -   **Explosion / Gore Level**: Low, Medium, High, Extreme. Determines the velocity and amount of blood during the death sequence.
+
+### 5.3. Enhanced Targeting
+
+The targeting system has been updated to be more user-friendly. When a player selects an ability, the game now enters a "targeting mode":
+
+-   **Valid Targets**: Potential targets for the selected ability are highlighted with a bright glow and a slight zoom effect.
+-   **Invalid Targets**: All other characters and the board itself are dimmed and desaturated, making it easy to focus on actionable targets.
+
+### 5.4. ASCII Art Backgrounds
+
+The game now features ASCII art backgrounds to enhance the atmosphere of the battles.
+
+-   **Dynamic Loading**: The background is loaded from a `.txt` file specified in `app.js`.
+-   **Aesthetic**: The art is styled to be subtle and not distract from the gameplay, providing an immersive, a thematic backdrop for the combat.
