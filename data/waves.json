@@ -1,16 +1,16 @@
 {
     "waves": [
         {
-            "name": "Wave 1: The Goblin Scouts",
-            "enemies": ["gobgob", "gobgob", "gobgob_wizard"]
+            "name": "Wave 1: A Lone Gobgob",
+            "enemies": ["Gobgob"]
         },
         {
-            "name": "Wave 2: Reinforced Goblin Pack",
-            "enemies": ["gobgob_brute", "gobgob_wizard", "gobgob_brute"]
+            "name": "Wave 2: A Pair of Gobgobs",
+            "enemies": ["Gobgob", "Gobgob"]
         },
         {
-            "name": "Wave 3: The Goblin King",
-            "enemies": ["gobgob_king", "gobgob_wizard", "gobgob_wizard"]
+            "name": "Wave 3: A Trio of Gobgobs",
+            "enemies": ["Gobgob", "Gobgob", "Gobgob"]
         }
     ]
 }
