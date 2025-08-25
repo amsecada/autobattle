@@ -36,22 +36,23 @@ button:hover {
 
 #game-container {
     /* display: none; // This will be controlled by JS */
-    width: 100%;
     max-width: 1200px;
+    margin: 0 auto;
     text-align: center;
 }
 
 #battle-screen {
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
     align-items: flex-start;
     width: 100%;
+    gap: 20px;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(5, 150px);
-    grid-template-rows: repeat(5, 150px);
+    grid-template-columns: repeat(5, 100px);
+    grid-template-rows: repeat(5, 100px);
     gap: 5px;
     border: 2px solid #f0f0f0;
     padding: 10px;
@@ -59,8 +60,8 @@ button:hover {
 }
 
 .grid-cell {
-    width: 150px;
-    height: 150px;
+    width: 100px;
+    height: 100px;
     border: 1px solid #555;
     background-color: #2a2a2a;
     display: flex;

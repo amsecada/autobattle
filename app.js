@@ -88,7 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Character Class
     class Character {
         constructor(name, art, stats, color = '#f0f0f0', abilities = []) {
-            console.log(`Constructor called for: ${name}`, { art, stats, color, abilities });
+            this.id = `char_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            console.log(`Constructor called for: ${name} (ID: ${this.id})`, { art, stats, color, abilities });
             this.name = name;
             this.art = art;
             this.color = color;
@@ -110,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 offhand: null,
                 trinket: null
             };
-            this.abilities = abilities;
+            this.abilities = JSON.parse(JSON.stringify(abilities));
             this.cooldowns = {};
             this.abilities.forEach(ability => {
                 this.cooldowns[ability.name] = 0;
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openAbilityPanel(character) {
+        abilityPanel.dataset.characterId = character.id;
         abilityPanelCharName.textContent = `${character.name}'s Abilities`;
         abilityPanelAbilities.innerHTML = ''; // Clear previous abilities
 
@@ -670,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const velocity = Math.random() * settings.velocity;
 
             if (goreLevel === 'medium' || goreLevel === 'extreme') {
-                const cellWidth = 150; // As defined in CSS
+                const cellWidth = 100; // As defined in CSS
 
                 if (goreLevel === 'extreme') { // Absurd mode - shoot to ANY other living character's cell
                     const livingCharacters = Array.from(cellCharacterMap.values()).filter(c => c.stats.hp > 0);
@@ -973,8 +975,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateAbilityPanelTimers() {
         if (abilityPanel.style.display !== 'block') return;
 
-        const charName = abilityPanelCharName.textContent.replace("'s Abilities", "");
-        const character = playerCharacters.find(p => p.name === charName);
+        const charId = abilityPanel.dataset.characterId;
+        if (!charId) return;
+        const character = playerCharacters.find(p => p.id === charId);
         if (!character) return;
 
         const buttons = abilityPanelAbilities.querySelectorAll('.ability-button');
@@ -1184,8 +1187,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Clicked on gap or a button on cooldown
         }
 
-        const charName = abilityPanelCharName.textContent.replace("'s Abilities", "");
-        const character = playerCharacters.find(p => p.name === charName);
+        const charId = abilityPanel.dataset.characterId;
+        if (!charId) return;
+        const character = playerCharacters.find(p => p.id === charId);
         if (!character) return;
 
         const abilityName = button.dataset.abilityName;
