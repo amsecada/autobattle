@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const abilityPanelCharName = document.getElementById('ability-panel-char-name');
     const abilityPanelAbilities = document.getElementById('ability-panel-abilities');
     const abilityPanelClose = document.getElementById('ability-panel-close');
+    const targetingModal = document.getElementById('targeting-modal');
 
 
     // Game Settings
@@ -236,16 +237,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         targetingState = { source, ability, timeoutId };
 
-        // Add listeners to the grids
-        playerGrid.addEventListener('click', handleTargetSelection);
-        enemyGrid.addEventListener('click', handleTargetSelection);
+        targetingModal.style.display = 'flex';
+        targetingModal.addEventListener('click', handleTargetSelection);
     }
 
     function handleTargetSelection(event) {
         if (!targetingState) return;
 
-        const cell = event.target.closest('.grid-cell');
-        if (!cell) return;
+        // Since the modal is a full-screen overlay, we need to figure out what's underneath the click
+        targetingModal.style.display = 'none'; // Temporarily hide the modal
+        const clickedElement = document.elementFromPoint(event.clientX, event.clientY);
+        targetingModal.style.display = 'flex'; // Show it again immediately
+
+        const cell = clickedElement ? clickedElement.closest('.grid-cell') : null;
+
+        if (!cell) {
+             logMessage('No target selected. Cancelling.', 'gray');
+             exitTargetingMode();
+             return;
+        }
 
         const target = cellCharacterMap.get(cell.id);
         if (!target) return;
@@ -280,8 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.cursor = 'default';
         targetingState = null;
 
-        playerGrid.removeEventListener('click', handleTargetSelection);
-        enemyGrid.removeEventListener('click', handleTargetSelection);
+        targetingModal.style.display = 'none';
+        targetingModal.removeEventListener('click', handleTargetSelection);
     }
 
     function autoTargetAbility() {
@@ -587,9 +597,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const goreSettings = {
             low: { velocity: 50, count: 5 },
-            medium: { velocity: 100, count: 10 },
+            medium: { velocity: 250, count: 30 },
             high: { velocity: 150, count: 20 },
-            extreme: { velocity: 250, count: 30 },
+            extreme: { velocity: 500, count: 50 }, // Absurd values
         };
 
         const settings = goreSettings[goreLevel];
@@ -610,10 +620,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cell.appendChild(particle);
 
-            const angle = Math.random() * Math.PI * 2;
+            let x, y;
             const velocity = Math.random() * settings.velocity;
-            const x = Math.cos(angle) * velocity;
-            const y = Math.sin(angle) * velocity;
+
+            if (goreLevel === 'extreme') { // Absurd mode - shoot to adjacent cells
+                const adjacentCoords = [
+                    { r: -1, c: -1 }, { r: -1, c: 0 }, { r: -1, c: 1 },
+                    { r: 0, c: -1 },                 { r: 0, c: 1 },
+                    { r: 1, c: -1 }, { r: 1, c: 0 }, { r: 1, c: 1 },
+                ];
+                const targetCoord = adjacentCoords[Math.floor(Math.random() * adjacentCoords.length)];
+                const cellWidth = 150; // As defined in CSS
+                x = targetCoord.c * cellWidth + (Math.random() - 0.5) * cellWidth;
+                y = targetCoord.r * cellWidth + (Math.random() - 0.5) * cellWidth;
+            } else {
+                const angle = Math.random() * Math.PI * 2;
+                x = Math.cos(angle) * velocity;
+                y = Math.sin(angle) * velocity;
+            }
+
 
             particle.style.setProperty('--death-transform', `translate(${x}px, ${y}px)`);
 
@@ -630,8 +655,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1600);
     }
 
+    function addParticleEffect(target, particleData) {
+        const cell = document.getElementById(target.cellId);
+        if (!cell) return;
+
+        for (let i = 0; i < particleData.count; i++) {
+            const style = particleData.styles[Math.floor(Math.random() * particleData.styles.length)];
+            const particle = document.createElement('div');
+            particle.classList.add('ability-particle');
+            particle.textContent = style.char;
+            particle.style.color = style.color;
+
+            cell.appendChild(particle);
+
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * particleData.velocity;
+            const x = Math.cos(angle) * velocity;
+            const y = Math.sin(angle) * velocity;
+
+            particle.style.setProperty('--ability-tx', `${x}px`);
+            particle.style.setProperty('--ability-ty', `${y}px`);
+
+            setTimeout(() => {
+                particle.remove();
+            }, 1000); // Match animation duration in CSS
+        }
+    }
+
     function useAbility(source, target, ability) {
         logMessage(`${source.name} uses ${ability.name} on ${target.name}!`, 'lightgreen');
+
+        if (ability.particles) {
+            addParticleEffect(target, ability.particles);
+        }
 
         playAbilityAnimation(source, target, () => {
              // This code runs after the animation has panned to the target

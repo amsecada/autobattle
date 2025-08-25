@@ -338,6 +338,26 @@ button:hover {
     }
 }
 
+/* --- Ability Particles --- */
+.ability-particle {
+    position: absolute;
+    font-size: 1.5rem;
+    pointer-events: none;
+    animation: ability-particle-anim 1s ease-out forwards;
+    text-shadow: 0 0 5px currentColor;
+}
+
+@keyframes ability-particle-anim {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--ability-tx), var(--ability-ty)) scale(0.2);
+    }
+}
+
 /* --- Ability Panel --- */
 .ability-panel {
     position: fixed;
