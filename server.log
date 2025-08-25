@@ -1,0 +1,12 @@
+127.0.0.1 - - [25/Aug/2025 01:07:42] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:42] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:42] "GET /app.js HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/heroes/squire.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/enemies/gobgob.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/heroes/priest.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/heroes/archer.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/enemies/gobgob_wizard.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/equipment/rusty_longsword.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/equipment/rusty_crossbow.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/abilities/heal.json HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2025 01:07:43] "GET /data/equipment/rusty_club.json HTTP/1.1" 200 -
