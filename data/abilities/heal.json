@@ -4,5 +4,14 @@
     "type": "healing",
     "target": "ally",
     "potency": 25,
-    "description": "Heals a friendly target for 25 HP."
+    "description": "Heals a friendly target for 25 HP.",
+    "particles": {
+        "count": 20,
+        "velocity": 80,
+        "styles": [
+            { "char": "*", "color": "lightgreen" },
+            { "char": ".", "color": "lightblue" },
+            { "char": "+", "color": "white" }
+        ]
+    }
 }
