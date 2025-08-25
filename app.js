@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Character Class
     class Character {
         constructor(name, art, stats, color = '#f0f0f0', abilities = []) {
+            console.log(`Constructor called for: ${name}`, { art, stats, color, abilities });
             this.name = name;
             this.art = art;
             this.color = color;
@@ -1078,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupGame() {
+        console.log("--- Starting Game Setup ---");
         combatLog.innerHTML = '';
         playerCharacters.length = 0;
         enemyCharacters.length = 0;
@@ -1086,16 +1088,21 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid(playerGrid, 'player');
         createGrid(enemyGrid, 'enemy');
 
+        console.log("Character Data Store:", characterDataStore);
+
         const heroTypes = ['Squire', 'Archer', 'Priest'];
         const heroPositions = [7, 12, 17]; // Middle column positions
 
         for (let i = 0; i < 3; i++) {
             const randomHeroType = heroTypes[Math.floor(Math.random() * heroTypes.length)];
+            console.log(`Creating hero of type: ${randomHeroType}`);
             const heroData = characterDataStore.characters[randomHeroType];
             if (heroData) {
+                console.log("Hero data found:", heroData);
                 const abilities = (heroData.abilities || [])
                     .map(name => characterDataStore.abilities[name.toLowerCase()])
                     .filter(Boolean); // Filter out any undefined abilities
+                console.log("Mapped abilities:", abilities);
                 const hero = new Character(heroData.name, heroData.art, heroData.stats, heroData.color, abilities);
                 if (heroData.default_equipment) {
                     Object.keys(heroData.default_equipment).forEach(slot => {
@@ -1187,5 +1194,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         enterTargetingMode(character, ability);
         abilityPanel.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        // Close ability panel if click is outside of it
+        if (abilityPanel.style.display === 'block' && !abilityPanel.contains(event.target)) {
+            // Check that the click was not on a character, which opens the panel
+            const clickedCell = event.target.closest('.grid-cell');
+            if (clickedCell && cellCharacterMap.has(clickedCell.id)) {
+                // If we clicked a character, let the character click handler manage the panel
+                return;
+            }
+            abilityPanel.style.display = 'none';
+        }
+
+        // Close settings modal if click is outside of it
+        if (settingsModal.style.display === 'flex' && !settingsModal.querySelector('.modal-content').contains(event.target)) {
+            settingsModal.style.display = 'none';
+        }
     });
 });
