@@ -44,6 +44,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const abilityQueue = [];
 
     // --- Data Loading ---
+    async function loadText(filePath) {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${filePath}: ${response.statusText}`);
+        }
+        return response.text();
+    }
+
+    async function loadBackground(url) {
+        try {
+            const art = await loadText(url);
+            const backgroundArtElement = document.getElementById('background-art');
+            if (backgroundArtElement) {
+                backgroundArtElement.textContent = art;
+            }
+        } catch (error) {
+            console.error('Failed to load background art:', error);
+        }
+    }
+
     async function loadJson(filePath) {
         const response = await fetch(filePath);
         if (!response.ok) {
@@ -234,7 +254,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         logMessage(`Select a target for ${source.name}'s ${ability.name}.`, 'yellow');
-        document.body.style.cursor = 'crosshair';
+        document.body.classList.add('targeting-active');
+
+        // Highlight valid targets
+        const potentialTargets = (ability.target === 'ally' || ability.target === 'self') ? playerCharacters : enemyCharacters;
+        potentialTargets.forEach(char => {
+            if (char.stats.hp > 0) {
+                const cell = document.getElementById(char.cellId);
+                if (cell) {
+                    cell.classList.add('valid-target');
+                }
+            }
+        });
+        if (ability.target === 'self') {
+            const selfCell = document.getElementById(source.cellId);
+            if(selfCell) selfCell.classList.add('valid-target');
+        }
+
 
         const timeoutId = setTimeout(() => {
             logMessage('Time ran out. Auto-selecting target.', 'gray');
@@ -302,8 +338,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!targetingState) return;
 
         clearTimeout(targetingState.timeoutId);
-        document.body.style.cursor = 'default';
+        document.body.classList.remove('targeting-active');
         targetingState = null;
+
+        // Remove highlighting from all cells
+        document.querySelectorAll('.grid-cell.valid-target').forEach(cell => {
+            cell.classList.remove('valid-target');
+        });
 
         targetingModal.style.display = 'none';
         targetingModal.removeEventListener('click', handleTargetSelection);
@@ -1080,6 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupGame() {
         console.log("--- Starting Game Setup ---");
+        loadBackground('Backgrounds/heavy_forest.txt');
         combatLog.innerHTML = '';
         playerCharacters.length = 0;
         enemyCharacters.length = 0;

@@ -61,3 +61,17 @@ The following settings are available to the player:
 
 -   **Blood Mode**: On/Off. When on, additional blood particles (red dots and asterisks) are added to the death animation.
 -   **Explosion / Gore Level**: Low, Medium, High, Extreme. This setting controls the velocity and number of particles in the death animation.
+
+## 7. Enhanced Targeting
+
+When a player activates an ability, the game enters a visual targeting mode.
+
+-   **Highlighting**: All valid targets for the ability are highlighted with a bright, glowing effect to distinguish them from invalid targets.
+-   **Desaturation**: All other elements on the screen, including other characters and the game grid, are desaturated and dimmed. This helps the player focus on the action of selecting a target.
+
+## 8. ASCII Backgrounds
+
+The game engine now supports thematic ASCII art backgrounds.
+
+-   **File-Based**: Backgrounds are loaded from `.txt` files stored in the `/Backgrounds/` directory.
+-   **Styling**: The backgrounds are rendered with a low opacity and a specific color to ensure they provide atmosphere without interfering with the readability of the game board.
