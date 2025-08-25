@@ -242,23 +242,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleTargetSelection(event) {
+        // Stop the click from propagating to elements underneath the modal
+        event.preventDefault();
+        event.stopPropagation();
+
         if (!targetingState) return;
 
-        // Since the modal is a full-screen overlay, we need to figure out what's underneath the click
-        targetingModal.style.display = 'none'; // Temporarily hide the modal
-        const clickedElement = document.elementFromPoint(event.clientX, event.clientY);
-        targetingModal.style.display = 'flex'; // Show it again immediately
+        let clickedCell = null;
+        // Get all cells and check if the click was inside one of them
+        const cells = document.querySelectorAll('.grid-cell');
+        for (const cell of cells) {
+            const rect = cell.getBoundingClientRect();
+            if (event.clientX >= rect.left && event.clientX <= rect.right &&
+                event.clientY >= rect.top && event.clientY <= rect.bottom) {
+                clickedCell = cell;
+                break;
+            }
+        }
 
-        const cell = clickedElement ? clickedElement.closest('.grid-cell') : null;
-
-        if (!cell) {
+        if (!clickedCell) {
              logMessage('No target selected. Cancelling.', 'gray');
              exitTargetingMode();
              return;
         }
 
-        const target = cellCharacterMap.get(cell.id);
-        if (!target) return;
+        const target = cellCharacterMap.get(clickedCell.id);
+        if (!target) return; // Clicked on an empty cell
 
         const { source, ability } = targetingState;
         const isPlayerTarget = playerCharacters.includes(target);
@@ -597,9 +606,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const goreSettings = {
             low: { velocity: 50, count: 5 },
-            medium: { velocity: 250, count: 30 },
+            medium: { velocity: 500, count: 50 },
             high: { velocity: 150, count: 20 },
-            extreme: { velocity: 500, count: 50 }, // Absurd values
+            extreme: { velocity: 1000, count: 100 },
         };
 
         const settings = goreSettings[goreLevel];
@@ -612,6 +621,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const originRect = cell.getBoundingClientRect();
+
         particles.forEach(p => {
             const particle = document.createElement('div');
             particle.classList.add('death-particle');
@@ -623,16 +634,36 @@ document.addEventListener('DOMContentLoaded', () => {
             let x, y;
             const velocity = Math.random() * settings.velocity;
 
-            if (goreLevel === 'extreme') { // Absurd mode - shoot to adjacent cells
-                const adjacentCoords = [
-                    { r: -1, c: -1 }, { r: -1, c: 0 }, { r: -1, c: 1 },
-                    { r: 0, c: -1 },                 { r: 0, c: 1 },
-                    { r: 1, c: -1 }, { r: 1, c: 0 }, { r: 1, c: 1 },
-                ];
-                const targetCoord = adjacentCoords[Math.floor(Math.random() * adjacentCoords.length)];
+            if (goreLevel === 'medium' || goreLevel === 'extreme') {
                 const cellWidth = 150; // As defined in CSS
-                x = targetCoord.c * cellWidth + (Math.random() - 0.5) * cellWidth;
-                y = targetCoord.r * cellWidth + (Math.random() - 0.5) * cellWidth;
+
+                if (goreLevel === 'extreme') { // Absurd mode - shoot to ANY other living character's cell
+                    const livingCharacters = Array.from(cellCharacterMap.values()).filter(c => c.stats.hp > 0);
+                    if (livingCharacters.length > 0) {
+                        const targetCharacter = livingCharacters[Math.floor(Math.random() * livingCharacters.length)];
+                        const targetCell = document.getElementById(targetCharacter.cellId);
+                        const targetRect = targetCell.getBoundingClientRect();
+
+                        const deltaX = (targetRect.left + targetRect.width / 2) - (originRect.left + originRect.width / 2);
+                        const deltaY = (targetRect.top + targetRect.height / 2) - (originRect.top + originRect.height / 2);
+
+                        x = deltaX + (Math.random() - 0.5) * cellWidth;
+                        y = deltaY + (Math.random() - 0.5) * cellWidth;
+                    } else { // Fallback if no other living characters
+                         const angle = Math.random() * Math.PI * 2;
+                         x = Math.cos(angle) * velocity;
+                         y = Math.sin(angle) * velocity;
+                    }
+                } else { // Medium mode - shoot to adjacent cells
+                    const adjacentCoords = [
+                        { r: -1, c: -1 }, { r: -1, c: 0 }, { r: -1, c: 1 },
+                        { r: 0, c: -1 },                 { r: 0, c: 1 },
+                        { r: 1, c: -1 }, { r: 1, c: 0 }, { r: 1, c: 1 },
+                    ];
+                    const targetCoord = adjacentCoords[Math.floor(Math.random() * adjacentCoords.length)];
+                    x = targetCoord.c * cellWidth + (Math.random() - 0.5) * cellWidth;
+                    y = targetCoord.r * cellWidth + (Math.random() - 0.5) * cellWidth;
+                }
             } else {
                 const angle = Math.random() * Math.PI * 2;
                 x = Math.cos(angle) * velocity;
@@ -685,12 +716,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function useAbility(source, target, ability) {
         logMessage(`${source.name} uses ${ability.name} on ${target.name}!`, 'lightgreen');
 
-        if (ability.particles) {
-            addParticleEffect(target, ability.particles);
-        }
-
         playAbilityAnimation(source, target, () => {
              // This code runs after the animation has panned to the target
+
+            // Trigger particles at the same time as the healing effect
+            if (ability.particles) {
+                addParticleEffect(target, ability.particles);
+            }
+
             switch (ability.type) {
                 case 'healing':
                     const healAmount = ability.potency;
